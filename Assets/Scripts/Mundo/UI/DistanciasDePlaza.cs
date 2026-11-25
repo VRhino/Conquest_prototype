@@ -165,6 +165,15 @@ namespace ConquestTactics.Mundo.UI
         /// más 0,5 u de la plaza.</summary>
         public bool Menudo;
         public int OrigenMercenarios, MilitarMercenarios, TipoBandidos, NivelBandidos = 3, TipoAlijo, RecursoAlijo;
+        /// <summary>(La mesa y la previa) los blasones de las Facciones en las etiquetas y los estandartes, del catálogo del juego, como
+        /// `PantallasDeMundo` en la partida.</summary>
+        public static void BlasonesDePrueba(Almacen almacen)
+        {
+            CosasEnElMapa.SigiloDe = (faccionId, ancho) => Sigilos.DeFaccion(almacen, faccionId) is Sigilo s ? TexturaDeSigilo.De(s, ancho * 2) : null;
+        }
+
+        /// <summary>Las placas de las etiquetas del mapa a elegir (`CosasEnElMapa.Placa`).</summary>
+        public static readonly string[] NombresDePlaca = { "la de antes", "1 · bronce batido", "2 · tablilla con filete", "3 · cinta de bronce" };
         public static readonly string[] Militares = { "barracon", "galeriaDeTiro", "caballerizas" }, RecursosDeAlijo = { "trigo", "madera", "piedra", "oro" };
         /// <summary>El lado corto de la vivienda corriente de cada modelo de plaza, niveles 1 a 5 (media de sus dos variantes), en el espacio en
         /// que se escala (radio 1): medido el 23-11 corriendo los generadores (`medir_casas.py`: chozas, casas de adobe y casas de manzana, sin
@@ -256,7 +265,10 @@ namespace ConquestTactics.Mundo.UI
                 nodosDePueblo.Add(n);
                 Banco.Artefacto.Nodos.Add(n);
             }
+            // (el catálogo de blasones con sus emblemas antes de montar: el banco lo carga sin ellos)
+            TexturaDeSigilo.Asegurar();
             (almacen, _, Mapa) = Banco.Montar("Distancias de plaza", centro, Foto());
+            BlasonesDePrueba(almacen);
             Debug.Log("[Distancias de plaza] murallas medidas en su malla (huellas): " + string.Join(", ", MaquetasDelMapa.RadiosMedidos.Select(k => $"{k.Key} {k.Value:0.000}")));
             Mapa.Zonas = false;
             Mapa.TecladoDeCamara = false;
@@ -277,9 +289,11 @@ namespace ConquestTactics.Mundo.UI
         {
             var f = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = ++version };
             Puesto.Clear();
-            Asentamiento Plaza(string id, int nivel, (double x, double y) p)
+            // (las Facciones de prueba, con su nombre y su blasón: la tuya, f-1, y la de la plaza vecina, f-2)
+            f.Entidades.AddRange(BancoDelMapa.FaccionesDePrueba());
+            Asentamiento Plaza(string id, int nivel, (double x, double y) p, string faccion = "f-1")
             {
-                var a = new Asentamiento { Id = id, Nombre = $"plaza de nivel {nivel}", Nivel = (uint)nivel, FaccionId = "f-1", Posicion = BancoDelMapa.Pu(p.x, p.y),
+                var a = new Asentamiento { Id = id, Nombre = $"plaza de nivel {nivel}", Nivel = (uint)nivel, FaccionId = faccion, Posicion = BancoDelMapa.Pu(p.x, p.y),
                     TieneMuralla = Muralla && nivel >= 2 };
                 for (int i = 0; i < 48; i++) a.Zona.Add(BancoDelMapa.Pu(p.x + Zona * Math.Cos(i * Math.PI / 24), p.y + Zona * Math.Sin(i * Math.PI / 24)));
                 f.Entidades.Add(new Entidad { Asentamiento = a });
@@ -375,7 +389,7 @@ namespace ConquestTactics.Mundo.UI
                 var km = new CampamentoMercenarios { Id = "dp-mercenarios", Posicion = BancoDelMapa.Pu(pm.x, pm.y), Origen = (uint)OrigenMercenarios };
                 km.Edificios.AddRange(new[] { "taberna", "vivienda", "mercado", Militares[MilitarMercenarios] });
                 f.Entidades.Add(new Entidad { CampamentoMercenarios = km });
-                Puesto.Add((km.Id, ClaseDeCosa.Mercenarios, $"mercenarios (origen {OrigenMercenarios + 1}, {Militares[MilitarMercenarios]})", pm.x, pm.y));
+                Puesto.Add((km.Id, ClaseDeCosa.Mercenarios, $"mercenarios (origen {OrigenMercenarios + 1}, {new[] { "barracón", "galería de tiro", "caballerizas" }[MilitarMercenarios]})", pm.x, pm.y));
                 var pb = Rumbo(centro, 170, Menudo_(ClaseDeCosa.Bandidos));
                 var kb = new CampamentoBandidos { Id = "dp-bandidos", Posicion = BancoDelMapa.Pu(pb.x, pb.y), Nivel = (uint)NivelBandidos };
                 if (TipoBandidos == 1) kb.VetaId = "dp-veta"; else kb.BosqueId = "dp-bosque";
@@ -384,6 +398,13 @@ namespace ConquestTactics.Mundo.UI
                 var pa = Rumbo(centro, 215, Menudo_(ClaseDeCosa.Alijo));
                 f.Entidades.Add(new Entidad { Alijo = new Alijo { Id = "dp-alijo", Posicion = BancoDelMapa.Pu(pa.x, pa.y), Recurso = RecursosDeAlijo[RecursoAlijo], Cantidad = 1000 } });
                 Puesto.Add(("dp-alijo", ClaseDeCosa.Alijo, $"alijo {(TipoAlijo == 1 ? "en el hoyo" : "bajo la piel")} ({RecursosDeAlijo[RecursoAlijo]})", pa.x, pa.y));
+                // una batalla tuya (con tu estandarte) y una ajena, lado a lado
+                foreach (var (id, propia, grados) in new[] { ("dp-batalla-propia", true, 320.0), ("dp-batalla-ajena", false, 340.0) })
+                {
+                    var pt = Rumbo(centro, grados, Menudo_(ClaseDeCosa.Batalla));
+                    f.Entidades.Add(BancoDelMapa.UnaBatalla(id, pt.x, pt.y, propia));
+                    Puesto.Add((id, ClaseDeCosa.Batalla, propia ? "batalla propia" : "batalla ajena", pt.x, pt.y));
+                }
             }
             // la columna parada a la puerta (al radio de puerta)
             {
@@ -405,7 +426,7 @@ namespace ConquestTactics.Mundo.UI
             Mapa?.Nodos?.Soltar();
             {
             }
-            if (Vecina) Plaza("dp-vecina", Nivel, Rumbo(centro, 135, R.SeparacionPlazas));
+            if (Vecina) Plaza("dp-vecina", Nivel, Rumbo(centro, 135, R.SeparacionPlazas), "f-2");
             return f;
         }
 
@@ -699,6 +720,7 @@ namespace ConquestTactics.Mundo.UI
                 case "tipoBandidos": TipoBandidos = (int)Math.Max(0, Math.Min(1, Math.Round(v))); break;
                 case "nivelBandidos": NivelBandidos = (int)Math.Max(1, Math.Min(3, Math.Round(v) + 1)); break;
                 case "tipoAlijo": TipoAlijo = (int)Math.Max(0, Math.Min(1, Math.Round(v))); MaquetasDelMapa.AlijoForzado = TipoAlijo + 1; break;
+                case "placa": CosasEnElMapa.Placa = (int)Math.Max(0, Math.Min(3, Math.Round(v))); break;
                 case "recursoAlijo": RecursoAlijo = (int)Math.Max(0, Math.Min(3, Math.Round(v))); break;
                 case "varianteCiudadela": VarianteCiudadela = (int)Math.Max(1, Math.Min(2, Math.Round(v) + 1)); MaquetasDelMapa.VarianteCiudadelaForzada = VarianteCiudadela; break;
                 case "nivelPueblo": NivelPueblo = (int)Math.Max(1, Math.Min(3, Math.Round(v) + 1)); break;
@@ -1238,6 +1260,8 @@ namespace ConquestTactics.Mundo.UI
             capaRotulos.style.position = Position.Absolute;
             capaRotulos.style.left = capaRotulos.style.top = capaRotulos.style.right = capaRotulos.style.bottom = 0;
             raiz.Add(capaRotulos);
+            // (tema 10) las etiquetas del mapa, en la misma capa que los rótulos de la escena
+            Mapa?.PonerCapaDeNombres(capaRotulos);
             var claro = new Color(0.9f, 0.86f, 0.78f);
             Label Texto(VisualElement en, string t, int tam = 12, bool negrita = false)
             {
@@ -1443,6 +1467,8 @@ namespace ConquestTactics.Mundo.UI
                 Elegir("  nivel", "nivelBandidos", new[] { "1", "2", "3" }, () => NivelBandidos - 1);
                 Elegir("Alijo", "tipoAlijo", new[] { "bajo la piel", "en el hoyo" }, () => TipoAlijo);
                 Elegir("  recurso", "recursoAlijo", RecursosDeAlijo, () => RecursoAlijo);
+                // (tema 10, punto 8) la placa de las etiquetas del mapa: la de hoy o una de las tres de bronce
+                Elegir("Placa de las etiquetas", "placa", NombresDePlaca, () => CosasEnElMapa.Placa);
                 panelPisa.Add(menudo);
                 refrescos.Add(() => { foreach (var r in refrescosMenudo) r(); });
             }
@@ -1579,16 +1605,21 @@ namespace ConquestTactics.Mundo.UI
             {
                 var l = etiquetasSobre[i];
                 if (i >= Sobre.Count || cam == null || !Anillos["tamanos"]) { l.style.display = DisplayStyle.None; continue; }
-                var (_, nombre, tamano, x, y, alto) = Sobre[i];
-                var p = cam.WorldToViewportPoint(EscalaDelMapa.AEscena(x, y, Mapa.AlturaVisible(x, y) + alto));
+                var (id, nombre, tamano, x, y, alto) = Sobre[i];
+                // (tema 10: encima va la etiqueta del juego; el rótulo de la mesa, en el suelo, en el borde de su huella del lado de la cámara: por
+                // debajo de la maqueta en pantalla)
+                var (camX, _, camY) = EscalaDelMapa.AlMapa(cam.transform.position);
+                double dx = camX - x, dy = camY - y, dn = Math.Sqrt(dx * dx + dy * dy), borde = Huella(id);
+                double bx = dn > 1e-6 ? x + dx / dn * borde : x, by = dn > 1e-6 ? y + dy / dn * borde : y;
+                var p = cam.WorldToViewportPoint(EscalaDelMapa.AEscena(bx, by, Mapa.AlturaVisible(bx, by)));
                 bool ve = p.z > 0 && p.x > 0 && p.x < 1 && p.y > 0 && p.y < 1;
                 l.style.display = ve ? DisplayStyle.Flex : DisplayStyle.None;
                 if (!ve) continue;
                 l.text = $"<b>{nombre}</b>\n{tamano}";
                 float w = Mathf.Max(l.resolvedStyle.width, 60), h = Mathf.Max(l.resolvedStyle.height, 30);
-                var r = new Rect(p.x * W - w / 2, (1 - p.y) * H - h, w, h);
-                // (hacia arriba hasta que no pise nada de lo ya puesto)
-                for (int intento = 0; intento < 40 && ocupado.Any(o => o.Overlaps(r)); intento++) r.y -= 6;
+                var r = new Rect(p.x * W - w / 2, (1 - p.y) * H + 4, w, h);
+                // (hacia abajo hasta que no pise nada de lo ya puesto)
+                for (int intento = 0; intento < 40 && ocupado.Any(o => o.Overlaps(r)); intento++) r.y += 6;
                 ocupado.Add(r);
                 l.style.left = r.x;
                 l.style.top = r.y;

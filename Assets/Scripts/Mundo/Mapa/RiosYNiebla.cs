@@ -533,6 +533,7 @@ namespace ConquestTactics.Mundo.Mapa
             }
             var celdas = n.Celdas.Span;
             var visibles = n.Visibles.Span;
+            (exploradas, columnasE, filasE, celdaE) = (celdas.ToArray(), columnas, filas, n.TamanoCelda / 1000.0);
             for (int i = 0; i < columnas * filas; i++)
             {
                 byte e = Bit(celdas, i) ? (byte)255 : (byte)0, v = Bit(visibles, i) ? (byte)255 : (byte)0;
@@ -552,6 +553,18 @@ namespace ConquestTactics.Mundo.Mapa
         }
 
         static bool Bit(System.ReadOnlySpan<byte> m, int i) => (i >> 3) < m.Length && ((m[i >> 3] >> (i & 7)) & 1) == 1;
+
+        byte[] exploradas;
+        int columnasE, filasE;
+        double celdaE;
+
+        /// <summary>Si (x, y) (u) ya se exploró; sin niebla (la previa, la mesa), todo.</summary>
+        public bool Explorado(double x, double y)
+        {
+            if (exploradas == null || celdaE <= 0) return true;
+            int c = (int)Math.Floor(x / celdaE), f = (int)Math.Floor(y / celdaE);
+            return c >= 0 && f >= 0 && c < columnasE && f < filasE && Bit(exploradas, f * columnasE + c);
+        }
 
         public void Destruir()
         {

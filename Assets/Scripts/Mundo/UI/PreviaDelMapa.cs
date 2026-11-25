@@ -188,7 +188,8 @@ namespace ConquestTactics.Mundo.UI
             // lo fijo
             foreach (var (nivel, zona) in new[] { (1u, 16.0), (2u, 25.0), (3u, 35.0), (4u, 45.0), (5u, 55.0) })
                 if (b.Buscar(BancoDelMapa.RadioParaPlaza(nivel, zona, nivel >= 2)) is (double x, double y))
-                    b.Plaza($"plaza de nivel {nivel}", nivel, zona, nivel >= 2, "f-1", x, y);
+                    // (las de nivel par, de otra Facción: «Los de Tebas»)
+                    b.Plaza($"plaza de nivel {nivel}", nivel, zona, nivel >= 2, nivel % 2 == 0 ? "f-2" : "f-1", x, y);
             string madre = b.Foto.Entidades.Select(e => e.Asentamiento).FirstOrDefault(a => a != null)?.Id ?? "previa-madre";
             foreach (var recurso in new[] { "piedra", "cobre", "estano", "hierro", "oro" })
                 if (b.Buscar(3.5 * f) is (double x, double y)) b.PuebloExtractor(recurso, 2, madre, x, y);
@@ -200,7 +201,8 @@ namespace ConquestTactics.Mundo.UI
             if (b.Sitio(3 * f) is (double bx, double by)) b.Bandidos(2, false, bx, by);
             if (b.Sitio(2.5 * f) is (double ox, double oy)) b.Obra("obra arrancada", TipoObra.ObraPueblo, true, madre, ox, oy);
             if (b.Sitio(1.5 * f) is (double ax, double ay)) b.Alijo("alijo de trigo", "trigo", ax, ay);
-            if (b.Sitio(3 * f) is (double tx, double ty)) b.Batalla(tx, ty);
+            // una tuya y una ajena, lado a lado
+            if (b.Sitio(3 * f) is (double tx, double ty)) { b.Batalla(tx - 1.4, ty, true); b.Batalla(tx + 1.4, ty, false); }
             // la segunda ruta como la tuya: a la plaza de nivel 5 (desde 25 u de su centro)
             if (b.Sitios.Where(k => k.nombre.StartsWith("plaza de nivel 5")).Select(k => ((double, double)?)(k.x, k.y)).FirstOrDefault() is (double px, double py))
                 // (un sitio libre a 20-35 u; si no lo hay, en tierra)
@@ -245,6 +247,9 @@ namespace ConquestTactics.Mundo.UI
             mas.Entidades.Add(new Entidad { AedaItinerante = new AedaItinerante { Id = "previa-aeda", Posicion = BancoDelMapa.Pu(caminoA.x, caminoA.y) } });
             Moviles.Add("previa-aeda");
             Columna(mas, "previa-ajena", new[] { "heroe-ajeno" }, Tropas.Skip(2).ToList(), false, "f-2");
+            // (las Facciones de prueba con su nombre y su blasón; y una columna sin Facción, para comparar)
+            mas.Entidades.AddRange(BancoDelMapa.FaccionesDePrueba());
+            Columna(mas, "previa-sin-faccion", new[] { "heroe-sin-faccion" }, Tropas.Take(1).ToList(), false, "");
             // las dos rutas como la tuya (no van con lo que se mueve: no se paran ni se aparcan)
             foreach (var (id, de, a) in Rutas.Select(k => (k.Key, k.Value.desde, k.Value.hasta)).ToList())
             {
@@ -254,7 +259,10 @@ namespace ConquestTactics.Mundo.UI
             }
             foreach (var (nombre, x, y) in b.Sitios) rotulos.Add((nombre, x, y, null));
             mira = o;
+            // (el catálogo de blasones con sus emblemas antes de montar: el banco lo carga sin ellos)
+            TexturaDeSigilo.Asegurar();
             (almacen, sesion, Mapa) = b.Montar("Previa del mapa", o, mas);
+            DistanciasDePlaza.BlasonesDePrueba(almacen);
             // (sin las zonas de las plazas: en la partida nunca hay cinco plazas tan juntas; la zona sigue contando para su tamaño)
             Mapa.Zonas = false;
             Mapa.TecladoDeCamara = false;
@@ -530,6 +538,8 @@ namespace ConquestTactics.Mundo.UI
             capaRotulos.style.left = capaRotulos.style.top = 0;
             capaRotulos.style.right = capaRotulos.style.bottom = 0;
             raiz.Add(capaRotulos);
+            // (tema 10) las etiquetas del mapa, en la misma capa que los rótulos de la escena
+            Mapa?.PonerCapaDeNombres(capaRotulos);
             for (int i = 0; i < rotulos.Count; i++)
             {
                 var l = new Label(rotulos[i].nombre) { pickingMode = PickingMode.Ignore };
@@ -575,6 +585,12 @@ namespace ConquestTactics.Mundo.UI
             zonas.labelElement.style.color = new Color(0.9f, 0.86f, 0.78f);
             zonas.RegisterValueChangedCallback(ev => { Mapa.Zonas = ev.newValue; Mapa.RehacerRayas(); });
             panel.Add(zonas);
+            // (tema 10, punto 8) la placa de las etiquetas del mapa: la de hoy o una de las tres de bronce
+            var placa = new DropdownField("Placa de las etiquetas", DistanciasDePlaza.NombresDePlaca.ToList(), CosasEnElMapa.Placa);
+            placa.labelElement.style.minWidth = 150;
+            placa.labelElement.style.color = new Color(0.9f, 0.86f, 0.78f);
+            placa.RegisterValueChangedCallback(ev => CosasEnElMapa.Placa = Math.Max(0, Array.IndexOf(DistanciasDePlaza.NombresDePlaca, ev.newValue)));
+            panel.Add(placa);
             lectura = new Label();
             lectura.style.color = new Color(0.9f, 0.86f, 0.78f);
             lectura.style.marginTop = 6;

@@ -115,6 +115,8 @@ namespace ConquestTactics.Mundo.Mapa
             public double Lx, Ly, LGiro;
             /// <summary>Lo menudo: la batalla lleva su humo y su llama.</summary>
             public bool Humo;
+            /// <summary>Tu batalla (tema 10, punto 10): el estandarte de las columnas, con el blasón de `FaccionId` y este color, junto al carro.</summary>
+            public Vector4? EstandarteDeBando;
             /// <summary>Lo menudo: la huella (u) con que se elige su nivel de detalle (no menos de `HuellaDeDetalleMinima`: lo pequeño, como
             /// la atalaya o el alijo, pasaba al medio ya de cerca); NaN, la suya.</summary>
             public double HuellaDetalle = double.NaN;
@@ -184,6 +186,8 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>«Mejorado»: con los estandartes de las plazas en sus anclas.</summary>
         public static bool EstandartesEnPlazas = true;
+        /// <summary>Dónde se planta el estandarte de tu batalla: en el marco del carro (x, y de Blender), en radios de su huella.</summary>
+        public static Vector2 SitioDelEstandarteDeBatalla = new Vector2(0.75f, -0.45f);
         /// <summary>Estandartes de plaza puestos en el último `Dibujar` y dónde (la escena), para las pruebas.</summary>
         public int EstandartesPuestos { get; private set; }
         public readonly List<Vector3> PiesDeEstandarte = new List<Vector3>();
@@ -1143,10 +1147,14 @@ namespace ConquestTactics.Mundo.Mapa
                     case ClaseDeCosa.Batalla:
                     {
                         var mo = Menudo("batalla");
-                        if (mo != null) { PonerMenuda(c, mo, x, y, sem, Vector4.zero, false).Humo = true; break; }
-                        var t = e.Batalla.Ticket;
-                        bool propia = heroeId != null && t != null && (t.Atacante?.Participantes.Any(p => p.HeroeId == heroeId) == true || t.Defensor?.Participantes.Any(p => p.HeroeId == heroeId) == true);
-                        P.Batalla(arriba, x, y, propia);
+                        if (mo != null)
+                        {
+                            var mi = PonerMenuda(c, mo, x, y, sem, Vector4.zero, false);
+                            mi.Humo = true;
+                            if (c.Propia) { mi.FaccionId = c.FaccionId; mi.EstandarteDeBando = Lineal(c.ColorDeBando); }
+                            break;
+                        }
+                        P.Batalla(arriba, x, y, c.Propia);
                         break;
                     }
                 }
@@ -1647,6 +1655,17 @@ namespace ConquestTactics.Mundo.Mapa
                 foreach (var mi in miniaturas)
                 {
                     var mo = mi.Modelo;
+                    if (mo != null && !mi.BajoNiebla && mi.EstandarteDeBando is Vector4 bando)
+                    {
+                        // tu batalla: plantado junto al carro, al alto del de las columnas (se lee de lejos como ellas)
+                        double r = mi.Huella / mi.Escala;
+                        var pie = mi.M.MultiplyPoint3x4(DeBlender(r * SitioDelEstandarteDeBatalla.x, r * SitioDelEstandarteDeBatalla.y, 0));
+                        pie.y += ResiduoEn(mi, pie);
+                        FigurasDelMapa.EstandarteSuelto(pie, (float)(FigurasDelMapa.AltoDelEstandarte * EscalaDelMapa.MetrosPorUnidad), mi.FaccionId, bando);
+                        PiesDeEstandarte.Add(pie);
+                        EstandartesPuestos++;
+                        continue;
+                    }
                     if (mo == null || mi.BajoNiebla || mi.Padre != null || mo.Estandartes == null) continue;
                     foreach (var (anclas, m) in new[] { (mo.Estandartes, mi.M), (mi.Muralla ? mo.EstandartesMuralla : null, mi.MMuralla) })
                     {
@@ -1734,6 +1753,33 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Para las pruebas: lo más que queda el pie de una maqueta (lo más bajo de su malla: el zócalo enterrado o el talud) por
         /// encima del suelo pintado (u), mirado en 16 puntos a 0,8 de su huella; en ladera no debe pasar de un margen pequeño.</summary>
+        /// <summary>Lo más alto del modelo que se dibuja en (x, y) (u del mapa, la miniatura de ese sitio): la altura en la escena de la cima de su
+        /// malla de cerca y, si la lleva, de su muralla (a su escala, con su sesgo y asentada en el suelo), o null si ahí no hay modelo.</summary>
+        public float? CimaEn(double x, double y)
+        {
+            foreach (var mi in miniaturas)
+            {
+                if (mi.Padre != null || mi.Modelo == null || Math.Abs(mi.X - x) > 1e-6 || Math.Abs(mi.Y - y) > 1e-6) continue;
+                float? cima = null;
+                void Cima(Mesh malla, Matrix4x4 m)
+                {
+                    if (malla == null) return;
+                    var b = malla.bounds;
+                    // (las cuatro esquinas de arriba de su caja: con el giro y el sesgo, la más alta)
+                    foreach (var (u, w) in new[] { (b.min.x, b.min.z), (b.max.x, b.min.z), (b.min.x, b.max.z), (b.max.x, b.max.z) })
+                    {
+                        var p = m.MultiplyPoint(new Vector3(u, b.max.y, w));
+                        p.y += ResiduoEn(mi, p);
+                        cima = cima == null ? p.y : Math.Max(cima.Value, p.y);
+                    }
+                }
+                Cima(mi.Modelo.Villa[0], mi.M);
+                if (mi.Muralla) Cima(mi.Modelo.Muralla[0], mi.MMuralla);
+                return cima;
+            }
+            return null;
+        }
+
         public double AlAireMaximo()
         {
             double peor = 0, e = EscalaDelMapa.MetrosPorUnidad;

@@ -159,6 +159,31 @@ Button { margin: 0; }
 .nombre-mapa > Label { font-size: 10.5px; color: rgb(255, 255, 255); padding: 0; margin: 0; }
 .nombre-mapa--nodo > Label { font-size: 10px; color: rgb(220, 214, 200); }
 .nombre-mapa--tenue { opacity: 0.6; }
+.nombre-mapa-textos { flex-direction: column; }
+.nombre-mapa-segunda { flex-direction: row; align-items: center; }
+.nombre-mapa-segunda Label { font-size: 9px; color: rgb(214, 204, 182); padding: 0; margin: 0; }
+.nombre-mapa-aviso { flex-direction: row; align-items: center; margin-left: 6px; }
+.nombre-mapa-aviso > Label { margin-left: 2px; }
+.nombre-mapa--resaltada { background-color: rgba(60, 46, 18, 0.88); }
+/* Con la placa «bronce batido» y blasón, como el prototipo (`mundo3d.css`, Víctor, 2026-10-31 y 11-06): el escudo, más alto que el cartel,
+   montado sobre su borde izquierdo y saliéndose de él, con su sombra debajo; sus medidas, por el alto del cartel (`CosasEnElMapa.Escudo`). */
+.nombre-mapa-sombra { display: none; }
+.nombre-mapa.nombre-mapa--blason > .nombre-mapa-icono, .nombre-mapa.nombre-mapa--blason > .nombre-mapa-sombra { position: absolute; top: 50%; translate: 0 -50%; margin-right: 0; }
+.nombre-mapa.nombre-mapa--blason > .nombre-mapa-sombra { display: flex; margin-top: 3px; -unity-background-image-tint-color: rgba(0, 0, 0, 0.55); }
+/* Tema 10, punto 8: las tres placas de bronce a elegir (CosasEnElMapa.Placa; la 1, «bronce batido», la del juego; 0, la de antes): nueve
+   cortes de 12 px a tres cuartos de escala, sin la franja de color de la izquierda (la Facción, por su blasón y su nombre). Con la de
+   oro, los nodos de la zona que se funda; tenue, más gris; al pasar el ratón por una pulsable, algo mayor y el texto en oro. */
+.nombre-mapa--placa1, .nombre-mapa--placa2, .nombre-mapa--placa3 { background-color: rgba(0, 0, 0, 0); border-radius: 0; padding: 5px 11px 6px 11px;
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.75px; }
+.nombre-mapa--placa1 { background-image: url("Placas/placa1.png"); border-left-width: 0; }
+.nombre-mapa--placa2 { background-image: url("Placas/placa2.png"); border-left-width: 0; }
+.nombre-mapa--placa3 { background-image: url("Placas/placa3.png"); border-left-width: 0; padding: 5px 17px 6px 17px; }
+.nombre-mapa--placa1.nombre-mapa--resaltada { background-image: url("Placas/placa1_oro.png"); background-color: rgba(0, 0, 0, 0); }
+.nombre-mapa--placa2.nombre-mapa--resaltada { background-image: url("Placas/placa2_oro.png"); background-color: rgba(0, 0, 0, 0); }
+.nombre-mapa--placa3.nombre-mapa--resaltada { background-image: url("Placas/placa3_oro.png"); background-color: rgba(0, 0, 0, 0); }
+.nombre-mapa--placa1.nombre-mapa--tenue, .nombre-mapa--placa2.nombre-mapa--tenue, .nombre-mapa--placa3.nombre-mapa--tenue { -unity-background-image-tint-color: rgb(165, 165, 165); }
+.nombre-mapa--placa1.nombre-mapa--encima, .nombre-mapa--placa2.nombre-mapa--encima, .nombre-mapa--placa3.nombre-mapa--encima { scale: 1.08 1.08; }
+.nombre-mapa--placa1.nombre-mapa--encima Label, .nombre-mapa--placa2.nombre-mapa--encima Label, .nombre-mapa--placa3.nombre-mapa--encima Label { color: rgb(241, 220, 174); }
 .panel-mapa-arriba { position: absolute; top: 120px; left: 30%; right: 30%; }
 .fila-mapa { flex-direction: row; align-items: center; }
 .ficha-mapa { position: absolute; right: 12px; bottom: 12px; width: 340px; }

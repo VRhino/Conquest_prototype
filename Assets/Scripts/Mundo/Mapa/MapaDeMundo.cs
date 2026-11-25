@@ -41,6 +41,10 @@ namespace ConquestTactics.Mundo.Mapa
         bool vistaPedida;
         ArtefactoDeMundo artefacto;
         CosasEnElMapa pintor;
+        /// <summary>(Para las pruebas) lo que pinta las cosas, sus etiquetas y su aro.</summary>
+        public CosasEnElMapa Pintor => pintor;
+        /// <summary>(Las escenas de banco) dónde van las etiquetas, si su interfaz se monta después del mapa.</summary>
+        public void PonerCapaDeNombres(UnityEngine.UIElements.VisualElement capa) => pintor?.PonerCapaDeNombres(capa);
         TiempoDeMarcha tiempo;
         bool sucio = true;
         float proximasRayas;
@@ -459,7 +463,24 @@ namespace ConquestTactics.Mundo.Mapa
             nodos.GirosDePueblo = maquetas.GirosDeNodos;
             nodos.VersionGiros = maquetas.VersionGiros;
             maquetas.Dibujar(camara);
-            pintor.Nombres(Cosas, camara, cx, cy, (cerca + lejosCarga) / 2, NombresDeNodos, Camara.EnPantalla * 0.75);
+            // las etiquetas (tema 10): las de las cosas, la de tu columna con lo que pisa, y las Miradas
+            var heroeEnt = sesion.Almacen.Buscar(TipoEntidad.Heroe, heroeId())?.Heroe;
+            var miFaccionEt = heroeEnt != null && heroeEnt.HasFaccionId ? heroeEnt.FaccionId : null;
+            CosaDelMapa miCosa = null;
+            // (tu columna, solo si se pinta: las escenas de banco la apagan y su columna de prueba se quedaría con una etiqueta sobre la plaza)
+            if (PintarMiColumna && Columna != null && !Columna.HasDentroDe && (Columna.Plan != null || Columna.Posicion != null))
+            {
+                miCosa = aPintar.Count > Cosas.Count ? aPintar[aPintar.Count - 1] : null;
+                if (miCosa == null)
+                {
+                    var pm = Instante.Posicion(Columna.Plan, Columna.Posicion, ahora);
+                    miCosa = new CosaDelMapa { Clase = ClaseDeCosa.Ejercito, Id = Columna.Id, X = pm.x / 1000, Y = pm.y / 1000, Alto = 0.5 * ColumnasDelMapa.FactorDeFiguras,
+                        Color = CosasDelMapa.ColorDeFaccion(sesion.Almacen, Columna.FaccionId), Propia = true, FaccionId = string.IsNullOrEmpty(Columna.FaccionId) ? null : Columna.FaccionId };
+                }
+            }
+            var etiquetas = CosasDelMapa.Etiquetas(sesion.Almacen, Cosas, miFaccionEt, Columna, miCosa, ahora);
+            pintor.Nombres(etiquetas, camara, cx, cy, (cerca + lejosCarga) / 2, NombresDeNodos, Camara.EnPantalla * 0.75, niebla.Explorado,
+                fundacion != null ? (fundacion.X, fundacion.Y, fundacion.Radio) : ((double, double, double)?)null, c => maquetas.CimaEn(c.X, c.Y));
             if (sucio && Time.unscaledTime >= proximasRayas)
             {
                 sucio = false;
@@ -806,6 +827,7 @@ namespace ConquestTactics.Mundo.Mapa
                 if (teclado.leftArrowKey.isPressed || teclado.aKey.isPressed) Camara.Giro += 1.4 * dt;
                 if (teclado.rightArrowKey.isPressed || teclado.dKey.isPressed) Camara.Giro -= 1.4 * dt;
             }
+            if (pintor != null) pintor.Raton = raton?.position.ReadValue();
             if (raton == null) return;
             var p = raton.position.ReadValue();
             if (raton.leftButton.wasPressedThisFrame && !sobreInterfaz(p)) { pulsado = p; ultimoRaton = p; }
@@ -848,7 +870,8 @@ namespace ConquestTactics.Mundo.Mapa
                 CerrarLista();
                 return;
             }
-            var punto = PuntoBajo(pantalla);
+            // (un clic en la etiqueta de algo que se elige es un clic en ello: en su punto)
+            var punto = pintor.CosaBajoEtiqueta(pantalla, camara) is CosaDelMapa etiquetada ? (etiquetada.X, etiquetada.Y) : PuntoBajo(pantalla);
             if (punto == null) return;
             var bajo = CosasDelMapa.BajoElClic(Cosas, punto.Value.x, punto.Value.y, Camara.PxPorUnidad(Screen.height));
             if (bajo.Count == 0)

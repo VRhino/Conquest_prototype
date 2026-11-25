@@ -79,6 +79,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                     Fijar("variante", v);
                     yield return Esperar();
                     Assert.That(mapa.Maquetas.AlAireMaximo(), Is.LessThan(0.01), $"nivel {n}, variante {v + 1}: el suelo del modelo, en el suelo");
+                    EtiquetaSobreSuModelo(mapa, "plaza", $"plaza de nivel {n}, variante {v + 1}", "dp-plaza");
                 }
             Fijar("variante", 0);
             Fijar("nivel", 5);
@@ -421,6 +422,17 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             rt.Release();
         }
 
+        /// <summary>(Tema 10) La etiqueta de ese tipo, si se puso este fotograma, por encima de lo más alto del modelo de su cosa (y no más de 0,5 u).</summary>
+        static void EtiquetaSobreSuModelo(MapaDeMundo mapa, string tipo, string que, string cosaId = null)
+        {
+            var puesta = mapa.Pintor.Puestas.FirstOrDefault(p => p.etiqueta.Tipo == tipo && (cosaId == null || p.etiqueta.Cosa?.Id == cosaId));
+            Assert.That(puesta.etiqueta, Is.Not.Null, $"{que}: su etiqueta, puesta");
+            var cima = mapa.Maquetas.CimaEn(puesta.etiqueta.Cosa.X, puesta.etiqueta.Cosa.Y);
+            Assert.That(cima, Is.Not.Null, $"{que}: su modelo");
+            double sobre = (puesta.mundo.y - cima.Value) / EscalaDelMapa.MetrosPorUnidad;
+            Assert.That(sobre, Is.GreaterThan(0).And.LessThan(0.5), $"{que}: la etiqueta, {sobre:0.00} u sobre lo más alto del modelo");
+        }
+
         static IEnumerator TipoEnVivo()
         {
             var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
@@ -534,12 +546,47 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                     StringAssert.Contains($"alijo_{tb + 1} ", Maqueta("dp-alijo").malla, $"alijo {tb + 1}: su modelo");
                     StringAssert.StartsWith("mercenarios", Maqueta("dp-mercenarios").malla, "los mercenarios: su modelo");
                     Assert.That(mapa.Maquetas.AlAireMaximo(), Is.LessThan(0.01), $"bandidos {tb + 1}, nivel {nivelB}, alijo {tb + 1}: en el suelo");
+                    // (tema 10) la etiqueta de los mercenarios y de los bandidos, por encima de lo más alto de su modelo
+                    foreach (var tipoEt in new[] { "mercenarios", "bandidos" })
+                        EtiquetaSobreSuModelo(mapa, tipoEt, $"{tipoEt} (bandidos {tb + 1}, nivel {nivelB})");
                     foreach (var k in new[] { "plaza – mercenarios", "plaza – bandidos", "plaza – alijo" })
                     {
                         var fila = ((System.Collections.IList)tipo.GetField("Holguras").GetValue(d)).Cast<object>().First(h => ((string)h.GetType().GetField("Item1").GetValue(h)).StartsWith(k));
                         Assert.That(fila.GetType().GetField("Item7").GetValue(fila).ToString(), Is.EqualTo("Libre"), $"{k}: no pisa la plaza");
                     }
                 }
+            {
+                // (tema 10) pulsar la etiqueta de los mercenarios: se eligen ellos, por `Clic`, como pulsarlos en el mapa; la etiqueta no recoge el
+                // ratón (el clic y el arrastre de la cámara empiezan igual encima de ella)
+                var pm = mapa.Pintor.Puestas.First(p => p.etiqueta.Tipo == "mercenarios");
+                var sobre = (Vector2)mapa.Vista.WorldToScreenPoint(pm.mundo) + new Vector2(0, 6);
+                Assert.That(mapa.Pintor.CosaBajoEtiqueta(sobre, mapa.Vista)?.Id, Is.EqualTo("dp-mercenarios"), "la etiqueta de los mercenarios, bajo el clic");
+                mapa.Seleccionar(null);
+                _ = mapa.Clic(sobre);
+                yield return Esperar();
+                Assert.That(mapa.Seleccionada?.Id, Is.EqualTo("dp-mercenarios"), "pulsar su etiqueta los elige");
+                var capa = mapa.Pintor.CapaDeNombres;
+                var local = new Vector2(sobre.x / mapa.Vista.pixelWidth * capa.layout.width, (1 - sobre.y / mapa.Vista.pixelHeight) * capa.layout.height);
+                var cogido = capa.panel.Pick(capa.LocalToWorld(local));
+                Assert.That(cogido == null || !(cogido.ClassListContains("nombre-mapa") || cogido.parent != null && cogido.parent.ClassListContains("nombre-mapa")), "la etiqueta no recoge el ratón");
+            }
+            {
+                // (tema 10, punto 10) una batalla tuya y una ajena lado a lado: la tuya, con un estandarte plantado junto al carro; la ajena, sin
+                // él; ninguna con etiqueta
+                var propia = mapa.Cosas.Single(c => c.Id == "dp-batalla-propia");
+                var ajena = mapa.Cosas.Single(c => c.Id == "dp-batalla-ajena");
+                Assert.IsTrue(propia.Propia && !ajena.Propia, "la de heroe-banco es la tuya");
+                StringAssert.StartsWith("batalla", Maqueta("dp-batalla-propia").malla, "la tuya, el mismo carro");
+                var hp = tipo.GetMethod("Huellas").Invoke(d, new object[] { "dp-plaza" });
+                double huellaPlaza = (double)hp.GetType().GetField("Item1").GetValue(hp);
+                var plaza = mapa.Cosas.Single(c => c.Id == "dp-plaza");
+                int Junto(CosaDelMapa b) => mapa.Maquetas.PiesDeEstandarte.Select(p => EscalaDelMapa.AlMapa(p)).Count(p =>
+                    Math.Sqrt((p.x - b.X) * (p.x - b.X) + (p.y - b.Y) * (p.y - b.Y)) < 1.4
+                    && Math.Sqrt((p.x - plaza.X) * (p.x - plaza.X) + (p.y - plaza.Y) * (p.y - plaza.Y)) > huellaPlaza + 0.25);
+                Assert.AreEqual(1, Junto(propia), "la tuya, su estandarte junto al carro");
+                Assert.AreEqual(0, Junto(ajena), "la ajena, sin él");
+                Assert.IsFalse(mapa.Pintor.Puestas.Any(p => p.etiqueta.Cosa?.Clase == ClaseDeCosa.Batalla), "las batallas, sin etiqueta");
+            }
             Fijar("menudo", 0);
             // los pueblos a la medida de la choza (1:1 con su nodo), de cada recurso: su modelo, asentado en el suelo
             for (int t = 0; t <= 5; t++)

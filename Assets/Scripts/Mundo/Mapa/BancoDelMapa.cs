@@ -304,10 +304,28 @@ namespace ConquestTactics.Mundo.Mapa
             Sitios.Add((nombre, x, y));
         }
 
-        public void Batalla(double x, double y)
+        /// <summary>Una batalla en curso contra bandidos: la tuya («heroe-banco», de f-1, ataca) o la de otro (de f-2).</summary>
+        public void Batalla(double x, double y, bool propia)
         {
-            Foto.Entidades.Add(new Entidad { Batalla = new Batalla { Id = NuevoId(), Punto = Pu(x, y), Estado = EstadoBatalla.BatallaEnCurso } });
-            Sitios.Add(("batalla", x, y));
+            Foto.Entidades.Add(UnaBatalla(NuevoId(), x, y, propia));
+            Sitios.Add((propia ? "batalla propia" : "batalla ajena", x, y));
+        }
+
+        /// <summary>Las Facciones de prueba de la mesa y la previa, con nombre y blasón del catálogo del juego: f-1, «Los Atridas» (la del héroe
+        /// del banco), y f-2, «Los de Tebas».</summary>
+        public static IEnumerable<Entidad> FaccionesDePrueba() => new[]
+        {
+            new Entidad { Faccion = new Faccion { Id = "f-1", Nombre = "Los Atridas", Sigilo = new Sigilo { FormaId = "aspis", CampoId = "liso", EmblemaId = "leon",
+                ColorPrimarioId = "azul", ColorSecundarioId = "oro", ColorEmblemaId = "oro", OrlaId = "greca", ColorOrlaId = "oro" } } },
+            new Entidad { Faccion = new Faccion { Id = "f-2", Nombre = "Los de Tebas", Sigilo = new Sigilo { FormaId = "clasico", CampoId = "partido", EmblemaId = "toro",
+                ColorPrimarioId = "rojo", ColorSecundarioId = "negro", ColorEmblemaId = "blanco", OrlaId = "lisa", ColorOrlaId = "blanco" } } },
+        };
+
+        public static Entidad UnaBatalla(string id, double x, double y, bool propia)
+        {
+            var ticket = new BattleTicket { Atacante = new BattleSide(), Defensor = new BattleSide() };
+            ticket.Atacante.Participantes.Add(new BattleParticipantSnapshot { HeroeId = propia ? "heroe-banco" : "heroe-otro", FaccionId = propia ? "f-1" : "f-2" });
+            return new Entidad { Batalla = new Batalla { Id = id, Punto = Pu(x, y), Estado = EstadoBatalla.BatallaEnCurso, Ticket = ticket } };
         }
 
         /// <summary>El banco de asentamientos: plazas de nivel 1 a 5 (con y sin muralla), los pueblos extractores de cada recurso y nivel, las
@@ -369,7 +387,8 @@ namespace ConquestTactics.Mundo.Mapa
             foreach (var m in new[] { "alijo_1", "alijo_2" })
                 foreach (var rec in new[] { "trigo", "madera", "piedra", "oro" })
                     if (Sitio(1.5 * f, sem => MaquetasDelMapa.ModeloDeAlijo(sem) == m) is (double x, double y)) Alijo($"{m.Replace('_', ' ')} de {rec}", rec, x, y);
-            if (Sitio(3 * f) is (double bx, double by)) Batalla(bx, by);
+            foreach (var propia in new[] { true, false })
+                if (Sitio(3 * f) is (double bx, double by)) Batalla(bx, by, propia);
         }
 
         /// <summary>El mapa: un héroe propio («heroe-banco», de f-1) con su columna («ej-banco», parada en `donde`; la cámara la sigue), lo

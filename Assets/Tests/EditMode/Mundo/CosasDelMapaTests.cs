@@ -152,5 +152,107 @@ namespace ConquestTactics.Mundo.Tests
             Assert.AreEqual(5, columna.X, 1e-9, "la columna ajena, a mitad de su plan en el instante");
             Assert.IsTrue(cosas.Single(c => c.Clase == ClaseDeCosa.Nodo).BajoNiebla);
         }
+
+        /// <summary>Las etiquetas del mapa (tema 10, tanda 1, como el prototipo): la plaza en dos líneas (nombre; «Nivel N» con los avisos de Armería
+        /// y de Aeda parado), la recordada tenue y solo con su nivel, los campamentos, las columnas (héroe y Facción; el ejército, su Facción; sin
+        /// Facción, «Sin Facción»), la caravana suelta de una Facción, el Aeda de camino (el parado no), las Miradas (sus minutos; caducada, tenue) y
+        /// el territorio bajo tu columna. Cuáles se pulsan.</summary>
+        [Test]
+        public void LasEtiquetasDelMapa()
+        {
+            var a = new Almacen();
+            var f = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 1 };
+            f.Entidades.Add(new Entidad { Faccion = new Faccion { Id = "f-1", Nombre = "Los Atridas" } });
+            f.Entidades.Add(new Entidad { Faccion = new Faccion { Id = "f-2", Nombre = "Los de Tebas" } });
+            f.Entidades.Add(new Entidad { Asentamiento = new Asentamiento { Id = "as-1", Nombre = "Micenas", FaccionId = "f-1", Nivel = 3, ArmeriaActiva = true, Posicion = new Punto { X = 100_000, Y = 50_000 } } });
+            f.Entidades.Add(new Entidad { Asentamiento = new Asentamiento { Id = "as-2", Nombre = "Tebas", FaccionId = "f-2", Nivel = 2, Posicion = new Punto { X = 200_000, Y = 50_000 } } });
+            f.Entidades.Add(new Entidad { FichaConocida = new FichaConocida { AsentamientoId = "as-3", Nombre = "Pilos", FaccionId = "f-2", Nivel = 4, Posicion = new Punto { X = 300_000, Y = 50_000 } } });
+            f.Entidades.Add(new Entidad { AedaItinerante = new AedaItinerante { Id = "aeda-1", EnAsentamientoId = "as-2" } });
+            f.Entidades.Add(new Entidad { AedaItinerante = new AedaItinerante { Id = "aeda-2", Posicion = new Punto { X = 50_000, Y = 50_000 } } });
+            f.Entidades.Add(new Entidad { CampamentoMercenarios = new CampamentoMercenarios { Id = "camp-1", Posicion = new Punto { X = 10_000, Y = 10_000 } } });
+            f.Entidades.Add(new Entidad { CampamentoBandidos = new CampamentoBandidos { Id = "bandidos-1", Nivel = 2, Posicion = new Punto { X = 20_000, Y = 10_000 } } });
+            f.Entidades.Add(new Entidad { Heroe = new Heroe { Id = "heroe-2", DisplayName = "Aquiles", FaccionId = "f-2" } });
+            var personal = new Ejercito { Id = "ej-2", FaccionId = "f-2", Tipo = TipoColumna.ColumnaPersonal, Posicion = new Punto { X = 30_000, Y = 10_000 } };
+            personal.Participantes.Add(new Participante { HeroeId = "heroe-2" });
+            f.Entidades.Add(new Entidad { Ejercito = personal });
+            f.Entidades.Add(new Entidad { Ejercito = new Ejercito { Id = "ej-3", FaccionId = "f-2", Tipo = TipoColumna.ColumnaEjercito, Posicion = new Punto { X = 40_000, Y = 10_000 } } });
+            f.Entidades.Add(new Entidad { Ejercito = new Ejercito { Id = "ej-4", Tipo = TipoColumna.ColumnaEjercito, Posicion = new Punto { X = 45_000, Y = 10_000 } } });
+            f.Entidades.Add(new Entidad { Caravana = new Caravana { Id = "car-1", FaccionId = "f-2", Posicion = new Punto { X = 60_000, Y = 10_000 } } });
+            f.Entidades.Add(new Entidad { Caravana = new Caravana { Id = "car-2", Posicion = new Punto { X = 65_000, Y = 10_000 } } });
+            f.Entidades.Add(new Entidad { Mirada = new MiradaIntel { Id = "mir-1", Centro = new Punto { X = 70_000, Y = 10_000 }, Radio = 8000, ExpiraEnMs = 1000 + 5 * 60_000 - 1 } });
+            f.Entidades.Add(new Entidad { Mirada = new MiradaIntel { Id = "mir-2", Centro = new Punto { X = 80_000, Y = 10_000 }, Radio = 8000, ExpiraEnMs = 500, LibreEnMs = 1000 + 2 * 60_000 } });
+            a.Aplicar(new MensajeDeServidor { Foto = f });
+            var cosas = CosasDelMapa.Reunir(a, null, 1000, new NodoRecurso[0], 12);
+            // tu columna, en tierra de Tebas
+            var mia = new Ejercito { Id = "ej-1", FaccionId = "f-1", Tipo = TipoColumna.ColumnaPersonal, TerritorioFaccionId = "f-2", Posicion = new Punto { X = 0, Y = 0 } };
+            var miCosa = new CosaDelMapa { Clase = ClaseDeCosa.Ejercito, Id = "ej-1", X = 0, Y = 0, FaccionId = "f-1", Propia = true };
+            var et = CosasDelMapa.Etiquetas(a, cosas, "f-1", mia, miCosa, 1000).ToDictionary(e => e.Id);
+            var micenas = et["plaza:as-1"];
+            Assert.AreEqual("Micenas", micenas.Texto);
+            Assert.AreEqual("Nivel 3", micenas.Subtexto);
+            CollectionAssert.AreEqual(new[] { "Armería" }, micenas.Avisos.Select(x => x.palabra), "la Armería activa, aviso de la plaza");
+            Assert.AreEqual(40, micenas.AnchoSigilo);
+            Assert.AreEqual("f-1", micenas.FaccionSigilo);
+            CollectionAssert.AreEqual(new[] { "Aeda" }, et["plaza:as-2"].Avisos.Select(x => x.palabra), "el Aeda parado en Tebas, aviso de Tebas");
+            Assert.IsFalse(et.ContainsKey("aeda:aeda-1"), "el Aeda parado no lleva etiqueta propia");
+            var pilos = et["plaza:as-3"];
+            Assert.IsTrue(pilos.Tenue, "la recordada, tenue");
+            Assert.AreEqual("Nivel 4", pilos.Subtexto);
+            Assert.IsEmpty(pilos.Avisos);
+            Assert.AreEqual("Mercenarios", et["mercenarios:camp-1"].Texto);
+            Assert.AreEqual("Bandidos · nivel 2", et["bandidos:bandidos-1"].Texto);
+            Assert.AreEqual("Aquiles", et["columna:ej-2"].Texto);
+            Assert.AreEqual("Los de Tebas", et["columna:ej-2"].Subtexto, "la Facción, debajo del héroe");
+            Assert.AreEqual("Los de Tebas", et["columna:ej-3"].Texto, "el ejército, su Facción");
+            Assert.AreEqual("Sin Facción", et["columna:ej-4"].Texto);
+            Assert.AreEqual("Los de Tebas", et["caravana:car-1"].Texto);
+            Assert.AreEqual(26, et["caravana:car-1"].AnchoSigilo);
+            Assert.IsFalse(et.ContainsKey("caravana:car-2"), "la caravana sin Facción, sin etiqueta");
+            Assert.AreEqual(CosasDelMapa.NombreDeAeda("aeda-2"), et["aeda:aeda-2"].Texto);
+            Assert.AreEqual("Aeda", et["aeda:aeda-2"].Subtexto);
+            Assert.AreEqual("5 min", et["mirada:mir-1"].Texto);
+            Assert.IsFalse(et["mirada:mir-1"].Tenue);
+            Assert.AreEqual("2 min", et["mirada:mir-2"].Texto, "caducada: hasta que la zona queda libre");
+            Assert.IsTrue(et["mirada:mir-2"].Tenue);
+            Assert.AreEqual("Los de Tebas", et["territorio:ej-1"].Texto, "bajo tu columna, de quién es la tierra");
+            Assert.IsFalse(et["columna:ej-1"].Pulsable, "tu columna no se elige con un clic (como en el mapa)");
+            CollectionAssert.AreEquivalent(new[] { "plaza:as-1", "plaza:as-2", "plaza:as-3", "mercenarios:camp-1", "bandidos:bandidos-1", "columna:ej-2", "columna:ej-3", "columna:ej-4",
+                "caravana:car-1", "aeda:aeda-2" }, et.Values.Where(e => e.Pulsable).Select(e => e.Id), "las que se pulsan");
+            // en tu tierra (o en tierra de nadie), sin aviso
+            mia.TerritorioFaccionId = "f-1";
+            Assert.IsFalse(CosasDelMapa.Etiquetas(a, cosas, "f-1", mia, miCosa, 1000).Any(e => e.Tipo == "territorio"));
+        }
+
+        /// <summary>Tema 10, punto 10: la batalla es tuya si combate en ella tu héroe o alguien de tu Facción (de cualquier lado); entonces lleva
+        /// tu Facción y su color (el de su estandarte). La ajena, como siempre. Ninguna batalla lleva etiqueta.</summary>
+        [Test]
+        public void LaBatallaPropia()
+        {
+            var a = new Almacen();
+            var f = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 1 };
+            f.Entidades.Add(new Entidad { Faccion = new Faccion { Id = "f-1", Nombre = "Los Atridas" } });
+            f.Entidades.Add(new Entidad { Heroe = new Heroe { Id = "heroe-1", FaccionId = "f-1" } });
+            // (id, atacante, su Facción, defensor, su Facción)
+            foreach (var (id, at, fat, de, fde) in new[] { ("bt-1", "heroe-9", "f-2", "heroe-1", "f-1"), ("bt-2", "heroe-7", "f-1", "heroe-8", "f-2"), ("bt-3", "heroe-9", "f-2", "heroe-8", (string)null) })
+            {
+                var t = new BattleTicket { Atacante = new BattleSide(), Defensor = new BattleSide() };
+                t.Atacante.Participantes.Add(new BattleParticipantSnapshot { HeroeId = at, FaccionId = fat });
+                var p = new BattleParticipantSnapshot { HeroeId = de };
+                if (fde != null) p.FaccionId = fde;
+                t.Defensor.Participantes.Add(p);
+                f.Entidades.Add(new Entidad { Batalla = new Batalla { Id = id, Estado = EstadoBatalla.BatallaEnCurso, Punto = new Punto { X = 10_000, Y = 10_000 }, Ticket = t } });
+            }
+            a.Aplicar(new MensajeDeServidor { Foto = f });
+            var cosas = CosasDelMapa.Reunir(a, "heroe-1", 1000, new NodoRecurso[0], 12).Where(c => c.Clase == ClaseDeCosa.Batalla).ToDictionary(c => c.Id);
+            Assert.IsTrue(cosas["bt-1"].Propia, "defiendes en ella");
+            Assert.IsTrue(cosas["bt-2"].Propia, "ataca alguien de tu Facción");
+            Assert.IsFalse(cosas["bt-3"].Propia);
+            Assert.AreEqual("f-1", cosas["bt-1"].FaccionId);
+            Assert.AreEqual(CosasDelMapa.ColorDeFaccion(a, "f-1"), cosas["bt-1"].ColorDeBando);
+            Assert.IsNull(cosas["bt-3"].FaccionId, "la ajena, como siempre");
+            Assert.AreEqual(CosasDelMapa.BatallaColor, cosas["bt-1"].Color, "su color (el de las cajas) no cambia");
+            Assert.IsFalse(CosasDelMapa.Etiquetas(a, cosas.Values, "f-1", null, null, 1000).Any(), "las batallas, sin etiqueta");
+            Assert.IsFalse(CosasDelMapa.EsBatallaPropia(new Batalla(), "heroe-1", "f-1"), "sin ticket, no es tuya");
+        }
     }
 }

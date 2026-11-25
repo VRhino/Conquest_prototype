@@ -38,8 +38,30 @@ namespace ConquestTactics.Mundo
         public double Velocidad;
         /// <summary>Una caravana enganchada a una columna: con figuras, sus carros van en la columna y ella no se pinta.</summary>
         public bool EnColumna;
-        /// <summary>La columna de quien mira (su color de bando, el propio).</summary>
+        /// <summary>La columna de quien mira (su color de bando, el propio); la batalla en que combatís tu héroe o alguien de tu Facción.</summary>
         public bool Propia;
+        /// <summary>Tu batalla: el color de tu Facción (sRGB), el de su estandarte; su blasón, el de `FaccionId`.</summary>
+        public uint ColorDeBando;
+    }
+
+    /// <summary>Una etiqueta del mapa (tema 10): lo que dice y de qué es; la coloca `CosasEnElMapa.Nombres`.</summary>
+    public sealed class EtiquetaDelMapa
+    {
+        public string Id, Tipo;
+        /// <summary>La cosa de la que es (null: una Mirada o el territorio).</summary>
+        public CosaDelMapa Cosa;
+        public double X, Y;
+        public string Texto, Subtexto;
+        public bool Tenue, Pulsable, Resaltada;
+        /// <summary>El blasón de esa Facción (y su ancho en px); si no, `Icono` o el icono de su cosa.</summary>
+        public string FaccionSigilo;
+        public int AnchoSigilo = 26;
+        public (string familia, string id)? Icono;
+        /// <summary>Los avisos de la segunda línea: icono (familia, id) y su palabra.</summary>
+        public List<(string familia, string id, string palabra)> Avisos = new List<(string, string, string)>();
+        public uint Color;
+        /// <summary>Lo que sube sobre el suelo (u); NaN: sobre lo más alto de su modelo (o, sin modelo, el alto de su cosa).</summary>
+        public double Alto = double.NaN;
     }
 
     /// <summary>Una raya del mapa (camino, frontera, anillo): sus puntos (u), su ancho (u), su color y si va bajo la niebla.</summary>
@@ -97,6 +119,12 @@ namespace ConquestTactics.Mundo
         /// <summary>«Batalla contra bandidos» o «Batalla».</summary>
         public static string NombreDeBatalla(Batalla b) =>
             b.Ticket?.ContextoEstrategico?.CampamentoBandidos != null || b.HasBloqueoCampamentoId ? "Batalla contra bandidos" : "Batalla";
+
+        /// <summary>¿Es tuya? (El motor no dice tu lado.) Si entre los participantes del atacante o del defensor está tu héroe o alguien de tu
+        /// Facción (`faccion_id` del participante).</summary>
+        public static bool EsBatallaPropia(Batalla b, string heroeId, string miFaccion) =>
+            b.Ticket is BattleTicket t && new[] { t.Atacante, t.Defensor }.Where(l => l != null).SelectMany(l => l.Participantes)
+                .Any(p => !string.IsNullOrEmpty(heroeId) && p.HeroeId == heroeId || !string.IsNullOrEmpty(miFaccion) && p.HasFaccionId && p.FaccionId == miFaccion);
 
         /// <summary>Su estado y quién combate: «En curso · Bat123 y Ana contra los bandidos».</summary>
         public static string DetalleDeBatalla(Almacen a, Batalla b)
@@ -320,7 +348,9 @@ namespace ConquestTactics.Mundo
                 if (bt.Estado != EstadoBatalla.BatallaConvocando && bt.Estado != EstadoBatalla.BatallaAsignada && bt.Estado != EstadoBatalla.BatallaEnCurso) continue;
                 var (x, y) = P(bt.Punto);
                 r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Batalla, Id = bt.Id, Nombre = NombreDeBatalla(bt), Detalle = DetalleDeBatalla(a, bt),
-                    X = x, Y = y, Radio = 0.65 * Fijos(ClaseDeCosa.Batalla), Alto = 0.55 * Fijos(ClaseDeCosa.Batalla), RadioClic = 0.65 * Fijos(ClaseDeCosa.Batalla) + Holgura, Color = BatallaColor, Entidad = e });
+                    X = x, Y = y, Radio = 0.65 * Fijos(ClaseDeCosa.Batalla), Alto = 0.55 * Fijos(ClaseDeCosa.Batalla), RadioClic = 0.65 * Fijos(ClaseDeCosa.Batalla) + Holgura, Color = BatallaColor, Entidad = e,
+                    Propia = EsBatallaPropia(bt, heroeId, miFaccion) });
+                if (r[r.Count - 1].Propia) { r[r.Count - 1].FaccionId = miFaccion; r[r.Count - 1].ColorDeBando = ColorDeFaccion(a, miFaccion); }
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Ejercito))
             {
@@ -464,6 +494,118 @@ namespace ConquestTactics.Mundo
 
         /// <summary>El último rumbo (unitario) de cada columna en marcha: parada, sus carros se quedan detrás según por dónde llegó.</summary>
         static readonly Dictionary<string, (double x, double y)> Rumbos = new Dictionary<string, (double, double)>();
+
+        // ── las etiquetas del mapa (tema 10, tanda 1: `etiquetasDesdeProyeccion` de BronzeAgeClient, `mundo3d/estado.ts`) ──
+
+        /// <summary>El nombre de una Facción (su ficha, o el directorio de Facciones), o null.</summary>
+        public static string NombreDeFaccion(Almacen a, string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            var f = a.Buscar(TipoEntidad.Faccion, id)?.Faccion;
+            if (f != null) return f.Nombre;
+            return a.Buscar(TipoEntidad.DirectorioFacciones, "facciones")?.DirectorioFacciones?.Facciones.FirstOrDefault(x => x.Id == id)?.Nombre;
+        }
+
+        /// <summary>Las etiquetas del mapa (sin colocar): la de cada plaza (el nombre y, debajo, «Nivel N» con los avisos de su Armería activa y de
+        /// un Aeda parado en ella; tenue y solo con el nivel la que se recuerda), los campamentos, las columnas (el héroe y su Facción debajo; el
+        /// ejército, su Facción), las caravanas sueltas de una Facción, los Aedas de camino, los nodos, las Miradas (sus minutos) y, bajo tu columna
+        /// cuando pisa tierra de otra Facción, de quién es (`territorio_faccion_id`, lo dice el servidor). `miCosa`: tu columna (con sus figuras,
+        /// si las lleva) o null; `miColumna`, su entidad.</summary>
+        public static List<EtiquetaDelMapa> Etiquetas(Almacen a, IEnumerable<CosaDelMapa> cosas, string miFaccion, Ejercito miColumna, CosaDelMapa miCosa, double ahora)
+        {
+            var r = new List<EtiquetaDelMapa>();
+            string Faccion(string id) => string.IsNullOrEmpty(id) ? "Sin Facción" : NombreDeFaccion(a, id) ?? "Sin Facción";
+            // un Aeda parado en una plaza no lleva etiqueta: lo dice el aviso de la plaza
+            var conAeda = new HashSet<string>(a.Todas(Entidad.CuerpoOneofCase.AedaItinerante).Select(e => e.AedaItinerante).Where(v => v.HasEnAsentamientoId).Select(v => v.EnAsentamientoId));
+            void Columna(CosaDelMapa c, Ejercito ej, bool pulsable)
+            {
+                var f = c.FaccionId;
+                int n = ej?.Participantes.Count ?? 0;
+                bool ejercito = ej != null && ej.Tipo == TipoColumna.ColumnaEjercito || c.Clase == ClaseDeCosa.Formacion;
+                var et = new EtiquetaDelMapa { Id = "columna:" + c.Id, Tipo = ejercito ? "ejercito" : "columna", Cosa = c, X = c.X, Y = c.Y, Color = c.Color, Pulsable = pulsable,
+                    FaccionSigilo = string.IsNullOrEmpty(f) ? null : f, AnchoSigilo = 26 };
+                if (ejercito)
+                {
+                    et.Texto = Faccion(f);
+                    // (lo que ya decía Conquest y el prototipo no: cuántos héroes)
+                    if (n > 1) et.Subtexto = $"{n} héroes";
+                }
+                else
+                {
+                    var heroe = n == 1 ? Textos.NombreDeHeroe(a, ej.Participantes[0].HeroeId) : n > 1 ? $"{n} héroes" : null;
+                    et.Texto = heroe ?? Faccion(f);
+                    if (heroe != null) et.Subtexto = Faccion(f);
+                }
+                r.Add(et);
+            }
+            foreach (var c in cosas)
+                switch (c.Clase)
+                {
+                    case ClaseDeCosa.Plaza:
+                    {
+                        var plaza = c.Entidad?.Asentamiento;
+                        var et = new EtiquetaDelMapa { Id = "plaza:" + c.Id, Tipo = "plaza", Cosa = c, X = c.X, Y = c.Y, Texto = c.Nombre, Color = c.Color, Pulsable = true,
+                            FaccionSigilo = string.IsNullOrEmpty(c.FaccionId) ? null : c.FaccionId, AnchoSigilo = 40 };
+                        if (plaza != null)
+                        {
+                            et.Subtexto = $"Nivel {plaza.Nivel}";
+                            if (plaza.ArmeriaActiva) et.Avisos.Add(("edificio", "armeria", "Armería"));
+                            if (conAeda.Contains(c.Id)) et.Avisos.Add(("glifo", "aeda", "Aeda"));
+                        }
+                        else
+                        {
+                            // la que solo se recuerda: tenue y solo su nivel
+                            et.Subtexto = c.Entidad?.FichaConocida is FichaConocida fc ? $"Nivel {fc.Nivel}" : null;
+                            et.Tenue = true;
+                        }
+                        r.Add(et);
+                        break;
+                    }
+                    case ClaseDeCosa.Mercenarios:
+                        r.Add(new EtiquetaDelMapa { Id = "mercenarios:" + c.Id, Tipo = "mercenarios", Cosa = c, X = c.X, Y = c.Y, Texto = c.Nombre, Color = c.Color, Pulsable = true });
+                        break;
+                    case ClaseDeCosa.Bandidos:
+                        r.Add(new EtiquetaDelMapa { Id = "bandidos:" + c.Id, Tipo = "bandidos", Cosa = c, X = c.X, Y = c.Y, Texto = $"Bandidos · {c.Detalle.ToLowerInvariant()}", Color = c.Color,
+                            Pulsable = true, Tenue = c.BajoNiebla });
+                        break;
+                    case ClaseDeCosa.Ejercito: case ClaseDeCosa.EjercitoAjeno: case ClaseDeCosa.Formacion:
+                        Columna(c, c.Entidad?.Ejercito, true);
+                        break;
+                    case ClaseDeCosa.Caravana: case ClaseDeCosa.CaravanaAjena:
+                        // la caravana suelta de una Facción: su blasón y su Facción (la enganchada va en su columna)
+                        if (!string.IsNullOrEmpty(c.FaccionId) && !c.EnColumna)
+                            r.Add(new EtiquetaDelMapa { Id = "caravana:" + c.Id, Tipo = "caravana", Cosa = c, X = c.X, Y = c.Y, Texto = Faccion(c.FaccionId), Color = c.Color, Pulsable = true,
+                                FaccionSigilo = c.FaccionId, AnchoSigilo = 26 });
+                        break;
+                    case ClaseDeCosa.Aeda:
+                        if (c.Entidad?.AedaItinerante is AedaItinerante v && !v.HasEnAsentamientoId)
+                            r.Add(new EtiquetaDelMapa { Id = "aeda:" + c.Id, Tipo = "aeda", Cosa = c, X = c.X, Y = c.Y, Texto = NombreDeAeda(c.Id), Subtexto = "Aeda", Color = c.Color,
+                                Pulsable = true, Icono = ("glifo", "aeda") });
+                        break;
+                    case ClaseDeCosa.Nodo:
+                        r.Add(new EtiquetaDelMapa { Id = "nodo:" + c.Id, Tipo = "nodo", Cosa = c, X = c.X, Y = c.Y, Texto = c.Nombre, Color = c.Color });
+                        break;
+                }
+            // tu columna (sin clic, como en el mapa) y, debajo, de quién es la tierra que pisa si no es tuya
+            if (miColumna != null && miCosa != null)
+            {
+                Columna(miCosa, miColumna, false);
+                if (miColumna.HasTerritorioFaccionId && miColumna.TerritorioFaccionId != "" && miColumna.TerritorioFaccionId != miFaccion)
+                    r.Add(new EtiquetaDelMapa { Id = "territorio:" + miColumna.Id, Tipo = "territorio", X = miCosa.X, Y = miCosa.Y, Texto = Faccion(miColumna.TerritorioFaccionId),
+                        Color = ColorDeFaccion(a, miColumna.TerritorioFaccionId), Icono = ("simbolo", "bandera"), Alto = 0.02 });
+            }
+            // las Miradas: en su centro, sus minutos; caducada, tenue y con el reloj de espera (los de hasta que la zona queda libre)
+            foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Mirada))
+            {
+                var m = e.Mirada;
+                bool abierta = ahora < m.ExpiraEnMs;
+                double hasta = abierta ? m.ExpiraEnMs : m.LibreEnMs > 0 ? m.LibreEnMs : m.ExpiraEnMs;
+                var (x, y) = P(m.Centro);
+                r.Add(new EtiquetaDelMapa { Id = "mirada:" + m.Id, Tipo = "mirada", X = x, Y = y, Texto = $"{Math.Max(0, Math.Ceiling((hasta - ahora) / 60000))} min", Tenue = !abierta,
+                    Color = abierta ? Mirada : 0xb4b4b4, Icono = abierta ? ("glifo", "inspeccionar") : ("glifo", "espera"), Alto = 0.1 });
+            }
+            return r;
+        }
 
         /// <summary>Los nombres de los Aedas itinerantes, por su N (el motor no los nombra; `mundo/aedas.ts`): bardos y cantores de la tradición griega.</summary>
         static readonly string[] NombresDeAedas = { "Demódoco", "Femio", "Tamiris", "Lino", "Museo", "Arión", "Terpandro", "Eumolpo", "Anfión", "Olén", "Taletas", "Alcmán",
