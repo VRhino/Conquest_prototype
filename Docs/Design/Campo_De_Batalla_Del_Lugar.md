@@ -85,7 +85,7 @@ Cambios en el motor:
 
 0. **`ContextoCaravana` gana `solitarios`**, como el de `ContextoCampoAbierto` (autor, 2026-11-23): verdadero si ninguno de los bandos es un ejército (una caravana suelta o de un héroe contra una columna). Decide el tamaño de la batalla (§6.1).
 1. `BattleMapReference` gana un `RecorteDelLugar`, de `lado_recorte` (el lado del mundo del área jugable más el anillo de 700 m: unas 27 u en la pequeña y 32 u en la grande, §6.1) centrado en `centro`:
-   - `alturas`: las muestras del relieve, cada 0,5 u, en u16 (unas 54×54 en la pequeña y 65×65 en la grande; con lo demás, unos 7,4 y 11 KB en protobuf, §10), con su agua por muestra: tierra, lago o mar. El bit de agua solo no basta: los tipos costa y orilla de lago (§5) necesitan distinguir el mar del lago (mesa, 2026-11-23).
+   - `alturas`: las muestras del relieve, cada 0,5 u, en el u16 del paquete de relieve tal cual (0 a 65 535 = 0 a 1000 m del mundo, sin el zoom: el motor solo copia; autor, 2026-11-26) (unas 54×54 en la pequeña y 65×65 en la grande; con lo demás, unos 7,4 y 11 KB en protobuf, §10), con su agua por muestra: tierra, lago o mar. El bit de agua solo no basta: los tipos costa y orilla de lago (§5) necesitan distinguir el mar del lago (mesa, 2026-11-23).
    - `punto`: el `Batalla.punto`, la posición del defensor. Cuando el recorte se desplaza hacia la tierra (punto 2), el `centro` ya no es el punto, y sin él se pierde dónde estaba el defensor (mesa, 2026-11-23).
    - `terreno`, `bosque`, `humedad` y `fertilidad`: las celdas de 4 u que toca el recorte (4×4 o 5×5, según caiga respecto a la rejilla), con el origen de la rejilla para alinearlas. La fertilidad da el verdor del suelo, como en el mapa de mundo (`colorDelSuelo`), y la usa la vegetación (mesa, 2026-11-23).
    - `rios`: los trozos de polilínea que cruzan el recorte, con sus vados y **el ancho de cada punto** (el del artefacto, §2.3), en milésimas de u como en el contrato (mesa, 2026-11-25). Las trenzas van como un río más. El caudal y el orden no hacen falta en el campo. Un ticket sin anchos (de un artefacto anterior al contrato 0.33.0) usa `ancho_rio_mundo`, el doble si el río es navegable.
@@ -93,6 +93,7 @@ Cambios en el motor:
    - `procedencia_atacante` y `procedencia_defensor`: un `Punto` por bando, a `distancia_procedencia` hacia atrás sobre su plan (o la plaza, el campamento o el pueblo de donde sale). Si un bando estaba quieto, su posición. Solo da la dirección: dónde va el spawn lo decide Conquest (§6.8).
    - El motor ya tiene todo eso: `Mundo::altura_en`, `densidad_bosque_en`, `terreno_en`, los ríos del artefacto, el paquete de relieve y la red de caminos.
 2. **El campo abierto es siempre terrestre** (autor, 2026-11-23): nunca se abre una batalla del todo dentro del agua. Si más de la mitad del área jugable es agua, el motor desplaza el recorte hacia donde haya más tierra, hasta que la tierra pase de la mitad. El `centro` del ticket es entonces el del recorte desplazado, no el `Batalla.punto`. Esta regla hay que añadirla a la entrada 78 del motor.
+   - **Y nunca pegado a un río sin vado** (autor, 2026-11-26): si el `punto` está tan cerca de un río sin vado dentro del área jugable que los dos spawns no caben en la orilla del defensor (cada uno a la distancia del tamaño, §6.1, con su placa), el motor aparta el `centro` tierra adentro, hacia la orilla del defensor, lo justo para que quepan. El defensor sigue en `punto`.
 3. `mapa_id` se queda, como comprobación de que el recorte sale del mundo vigente.
 4. Fuera de esta versión, para asedios: `SettlementBattleSnapshot` gana `centro` y el mismo recorte (§9).
 
@@ -111,7 +112,12 @@ Siguen el modelo híbrido: la generación es datos puros; Unity solo monta lo qu
    - los sitios clave del campo (el vado, la boca del paso, las crestas), para la IA;
    - una consulta de sitio válido (seco, llano y alcanzable desde los spawns), para quien coloque los objetivos;
    - una huella (FNV) de todo lo anterior.
-3. **Montaje** (Unity). Crea un Unity Terrain con esas alturas (así `calculateTerraindHeight` empieza a funcionar), los planos de agua, los árboles como instancias del Terrain y colliders solo en los troncos del área jugable, coloca los prefabs de spawn antes de su `Start()`, y hornea el NavMesh con un área nueva, agua somera, con su coste. La rejilla de zonas pasa al mundo ECS como un blob singleton.
+3. **Montaje** (Unity). Crea **dos Unity Terrain** (autor, 2026-11-26), porque Unity solo admite heightmaps de 2ⁿ+1 vértices y el campo con su anillo no cabe a 2 m (1201 vértices en la grande):
+   - **El jugable:** el área jugable más `margen_terreno` (100 m) a cada lado, en un heightmap de 513. Un vértice cada 1,6 m en la pequeña (800 m) y cada 2,3 m en la grande (1200 m). Lleva el collider y el NavMesh, y es el que muestrea `calculateTerraindHeight`, que así empieza a funcionar.
+   - **El del anillo:** todo el campo a `paso_anillo` (8 m), sin collider, bajo la niebla. Donde se solapa con el jugable queda por debajo y no se ve.
+   - La generación saca las alturas del jugable a la resolución de su Terrain y las del anillo a 8 m: no hace falta la rejilla de 2 m de todo el campo.
+
+   Además crea los planos de agua, los árboles como instancias del Terrain y colliders solo en los troncos del área jugable, coloca los prefabs de spawn antes de su `Start()`, y hornea el NavMesh con un área nueva, agua somera, con su coste. La rejilla de zonas pasa al mundo ECS como un blob singleton.
 
 **Los objetivos no son de este plan** (autor, 2026-11-23). Si hay puntos de captura o de suministro, cuántos y dónde, lo decide el modo de batalla. El campo solo ofrece la consulta de sitio válido (§11, H3 y H4).
 
@@ -237,7 +243,7 @@ Con eso, el tipo, por la tabla de §5.
   2. Si no, con las reglas de orillas.
   3. Sin ellas, con aviso.
   4. Si tampoco, el llano forzado: el campo se rehace entero como llano, con el agua (§6.9).
-  5. En el llano, si los bandos no se alcanzan, se avisa y el campo se queda.
+  5. En el llano, si los bandos no se alcanzan, se talla la bajada (§6.9).
 - **Los tres puntos de cada bando:** a −15, 0 y +15 m a lo ancho del eje.
 
 **11. Placas** (§6.2, paso 6). En cada placa, el plano `h = a + b · dx + c · dy` que mejor se ajusta al suelo del disco de 25 m (mínimos cuadrados). Se funde con el relieve a lo largo de otros 25 m. Después se vuelven a sacar las zonas de tierra.
@@ -248,7 +254,7 @@ Con eso, el tipo, por la tabla de §5.
 - **Dentro del hueco:** el árbol se mueve al azar ±40 % del paso.
 - **Las placas:** nada a menos de 25 + 6 m.
 
-Luego los **sotos**, con el aviso de `max_arboles` si se pasa:
+Luego los **sotos** (la mesa aún avisa con `max_arboles`, que en Conquest ya no es tope de dibujo, §6.6):
 - **Dónde:** una celda de 70 m donde la densidad no llega a 0,2 y la zona es llano o colina.
 - **Cuántos:** con probabilidad `0,25 · (0,5 + fertilidad)`, un grupo de 3 a 10 árboles en 8–20 m de radio, más juntos en el centro.
 - **Lejos de las placas:** a más de 25 + 25 m.
@@ -280,7 +286,7 @@ Luego los **sotos**, con el aviso de `max_arboles` si se pasa:
 - los caminos, que no están en el artefacto;
 - abrir sendas por el bosque cuando los spawns no se alcanzan (§6.9);
 - los colliders y `max_colliders`;
-- `intentos_validacion`;
+- la bajada tallada de §6.9;
 - `celda_bosque` y `bosque_cerrado` (§13 los nombra, pero la mesa no los usa).
 
 ### 6.1 Tamaño y escala interna contra externa
@@ -368,7 +374,7 @@ Antes de entender que el campo es un zoom (mesa, 2026-11-23), se probó a acentu
   En el vado de la batalla con el río encajado en su valle, la bajada deja llegar por tierra de una orilla a la otra por el vado. Antes, el relieve no lo dejaba.
 - El vado es agua rala: se cruza, pero ralentiza a quien la pisa (zona agua somera).
 - **En un vado, los bandos van siempre en orillas opuestas** (autor, 2026-11-22).
-- **Cómo se colocan** (autor, 2026-11-23): se gira sobre el centro hasta que cada spawn cae a un lado del río del vado, respetando el relieve como salga. La placa solo tiene que caer en seco; el lado lo da la línea del río, no que los spawns se alcancen por tierra. El atacante, si se puede, en la orilla de la que viene. Si el relieve no deja llegar por tierra de un spawn al otro (un río encajado en su valle, con las orillas en pared), se avisa y el campo se queda como es. Antes, el vado exigía placas sin acantilado y spawns que se alcanzaran; con el zoom y el detalle no los encontraba, y el campo caía al llano y perdía el río.
+- **Cómo se colocan** (autor, 2026-11-23): se gira sobre el centro hasta que cada spawn cae a un lado del río del vado, respetando el relieve como salga. La placa solo tiene que caer en seco; el lado lo da la línea del río, no que los spawns se alcancen por tierra. El atacante, si se puede, en la orilla de la que viene. Si el relieve no deja llegar por tierra de un spawn al otro (un río encajado en su valle, con las orillas en pared), se talla la bajada (§6.9). Antes, el vado exigía placas sin acantilado y spawns que se alcanzaran; con el zoom y el detalle no los encontraba, y el campo caía al llano y perdía el río.
 - **El vado es el único paso.** No hay paso de reserva: el cuello de botella es la gracia.
 - El cauce fuera del vado es infranqueable.
 - **Un vado que cae fuera del área jugable no se trae dentro** (autor, 2026-11-23). No hace falta: el mundo no deja que dos ejércitos se encuentren en orillas opuestas de un río sin un vado cerca, y esa batalla no tendría sentido. Bandos en orillas opuestas implica vado dentro del área jugable. La generación lo da por hecho y, si no se cumple, lo registra como error del recorte.
@@ -376,6 +382,7 @@ Antes de entender que el campo es un zoom (mesa, 2026-11-23), se probó a acentu
 ### 6.5 Ribera: río sin vado
 
 - Si el río cruza el área jugable sin vado, **los dos bandos están en la misma orilla** (autor, 2026-11-23).
+- Si el defensor está pegado al río, el motor ya ha apartado el centro tierra adentro para que quepan los dos spawns en su orilla (§3, punto 2). Así se cumplen a la vez la misma orilla y la misma distancia del centro.
 - El río es decoración: se coloca como va en el mundo y listo. No se cruza ni se hace nada con él (autor, 2026-11-23). Su cauce es agua honda, infranqueable, aunque parta el área jugable.
 
 ### 6.6 Bosque
@@ -389,6 +396,11 @@ Antes de entender que el campo es un zoom (mesa, 2026-11-23), se probó a acentu
   - Solo se ve: no cuenta para la táctica ni tiene collider.
   - En un llano salen unas 13 900 hierbas, 4600 matas y 600 piedras. En Unity, la hierba iría mejor como capa de detalle del Terrain.
 - Las zonas de bosque (para lo que toque en la táctica): por encima de `umbral_bosque_cerrado`, bosque cerrado, con troncos con collider; por encima de `umbral_bosque_claro`, bosque claro, sin colliders salvo algún tronco.
+- **El tope de árboles es de colliders, no de dibujo** (autor, 2026-11-26, a afinar sobre lo construido):
+  - se dibujan todos los árboles (los del Terrain van por GPU);
+  - si un campo pasaría de `max_colliders` troncos con collider, solo lo llevan los del borde del bosque y los de los claros y sendas;
+  - el interior del bosque cerrado se marca entero como no transitable en el NavMesh, como un bloque.
+  - Queda por ver con el campo montado cómo se juega un campo cubierto de bosque en un 80 % o más: puede que el bloque no transitable deje poco sitio y haya que aclararlo.
 - Los troncos con collider entran en el horneado del NavMesh: los `NavMeshAgent` de las unidades atraviesan cualquier collider que no esté en la malla (§11, H7).
 - Las reglas de dónde no va un árbol (pendiente, agua, roca) son las de `ReglasDeVegetacion`, para que el bosque de batalla se parezca al del mapa de mundo.
 - Las sendas se abren en el bosque cerrado: un camino del ticket que lo cruza, o una senda de semilla entre claros.
@@ -409,13 +421,19 @@ Los tramos del ticket se aplanan a su anchura por escalón (`ancho_sendero`, `an
 - Los puntos de spawn de cada bando (1-3 del atacante, 4-6 del defensor) se reparten por la placa de su bando, a lo ancho del eje.
 - **Cada spawn que se coloca se comprueba** (autor, 2026-11-23): su placa tiene que caer en seco, fuera de acantilado y en la orilla de su bando. Si uno no vale, se gira el eje lo mínimo, moviendo los dos spawns a la vez para que sigan a la misma distancia del centro, hasta que los dos valgan. Si ningún giro vale, se acorta `distancia_al_centro` por igual para los dos.
 
-### 6.9 Validación
+### 6.9 Validación: los dos bandos siempre se encuentran
 
-Antes de hornear, una inundación sobre la rejilla de zonas transitables comprueba que cada spawn llega al otro.
+**Regla del autor (2026-11-26): para que haya batalla, los dos bandos siempre tienen que poder encontrarse.** El vado se construye siempre; lo que puede faltar es la manera de llegar hasta él, o de un spawn al otro, porque con el zoom una ladera pasa de 45° (acantilado) o un bosque cerrado tapa el paso.
 
-Si falla, se abre una senda por el bosque por el camino más corto y se vuelve a comprobar. No se abren pasos por el agua. Un campo que no pasa la validación tras `intentos_validacion` cae al tipo llano con el relieve del lugar. Así nunca hay una batalla imposible.
+1. Se genera el campo como siempre.
+2. Una inundación sobre la rejilla de zonas comprueba que cada spawn llega al otro. En un vado, por el vado: de cada spawn a la entrada del vado de su orilla, y del vado a la otra orilla.
+3. Si no llega, se traza el camino más corto desde la placa que no llega hasta la zona alcanzable del otro bando (en un vado, hasta la entrada del vado). El acantilado y el bosque cerrado cuentan como caros; el agua honda y el cauce, como imposibles.
+4. Por ese camino se talla una **bajada**: `ancho_bajada` de ancho, con el suelo rebajado hasta `pendiente_bajada` como mucho y sin árboles. Tiene la pinta del camino pisado del vado (zona camino), y en un vado es la prolongación de su embudo ladera arriba.
+5. Se vuelve a comprobar. Como tallar solo baja la pendiente, siempre acaba llegando.
 
-El llano forzado conserva el agua del lugar: el mar, los lagos y los ríos (autor, 2026-11-25). Antes la quitaba, y una batalla junto a un río ancho salía sin él. Solo se relajan las reglas de los spawns: la orilla de cada bando deja de contar y, si el agua no deja llegar por tierra de un spawn al otro, se avisa y el campo se queda como es, igual que en el vado (§6.4).
+**Nunca se abre el agua honda.** El río solo se cruza por su vado; sin vado, los dos bandos van en la misma orilla (§6.5). Un recorte con los bandos en orillas opuestas sin vado es un error del recorte (§6.4).
+
+El llano forzado conserva el agua del lugar: el mar, los lagos y los ríos (autor, 2026-11-25). Solo se relajan las reglas de los spawns: la orilla de cada bando deja de contar. Si el agua los separa, los dos van a la misma orilla; si lo que los separa es relieve o bosque, se talla la bajada como arriba.
 
 ### 6.10 Cómo se ve (lo que pinta la mesa)
 
@@ -498,7 +516,7 @@ La IA (escuadras y héroes de la IA) recibe de la generación los sitios clave d
 La batalla es de servidor autoritativo, no de pasos sincronizados. Aun así, los seis clientes predicen su héroe sobre su NavMesh, y tienen que ver el mismo campo que el servidor.
 
 - **Cada parte genera el campo por su cuenta** desde la misma entrada: el recorte del ticket, que reciben todos los combatientes. No depende de cachés en disco (ni de un mundo viejo en caché), y no se manda el campo generado por la red.
-- **La generación es aritmética entera:** alturas en u16, posiciones cuantizadas, azar de `trazado::azar` portado a C# o SplitMix64. Nada de `Mathf.PerlinNoise` ni de `float` en lo que decide la forma. El ruido es entero, sobre una rejilla. Lo que se reutilice de `Relieve`, `ReglasDeVegetacion` o `CaucesDelMapa` hoy calcula en `double` (§11, H8).
+- **La generación es aritmética entera:** alturas en enteros de 32 bits en milímetros (el zoom se aplica en Conquest, sobre el u16 del ticket), posiciones cuantizadas, azar de `trazado::azar` portado a C# o SplitMix64. Nada de `Mathf.PerlinNoise` ni de `float` en lo que decide la forma. El ruido es entero, sobre una rejilla. Lo que se reutilice de `Relieve`, `ReglasDeVegetacion` o `CaucesDelMapa` hoy calcula en `double` (§11, H8).
 - **La semilla es del lugar, no de la batalla:** todo el ruido se toma en metros absolutos (la posición del mundo por 75) con semillas fijas por uso (§6.11). No hay semilla por batalla ni por recorte. El mismo lugar da un campo parecido, y los jugadores pueden aprenderlo (autor, 2026-11-22). El recorte se centra donde está el defensor, así que dos batallas en el mismo sitio pueden salir desplazadas unos metros: basta con que se parezcan, y el centro no se ajusta a ninguna rejilla (autor, 2026-11-23).
 - **Huella:** cada cliente calcula la huella del campo y la manda al conectar; el servidor la compara con la suya. Si no casa, se registra y la batalla sigue. El servidor manda igualmente; lo peor es que ese cliente vea correcciones de predicción.
 - **NavMesh:** cada parte la hornea de la misma geometría con la misma versión de Unity. Es lo único fuera de nuestro control. Las diferencias pequeñas solo cuestan correcciones, que ya se miden en `MedicionRedSystems.cs:335`.
@@ -516,14 +534,20 @@ Esta versión es solo de batallas en campo abierto (autor, 2026-11-23). Lo demá
 
 | Paso | Tamaño | Presupuesto |
 |---|---|---|
-| Lectura y generación | La pequeña: 2000×2000 m con el anillo; alturas a 2 m (1001²) y zonas a 4 m (500²). La grande: 2400×2400 m; alturas 1201² y zonas 600² | El presupuesto de 300 ms quedó superado: en la mesa, de 175 a 610 ms la pequeña y de 2 a 6 s la grande (§12.2). Falta fijar uno nuevo para la preparación, en el cliente y en el servidor |
-| Objetos | Árboles como instancias del Terrain (instanciado por GPU) | Hasta `max_arboles` (6000); colliders solo en troncos del área jugable, hasta `max_colliders` (1500) |
+| Lectura y generación | Dos Terrain (§4): el jugable, de 513² (800 m la pequeña, 1200 m la grande), y el del anillo a 8 m (250² la pequeña, 300² la grande). Zonas a 4 m solo en el jugable (200² y 300²) | El presupuesto de 300 ms quedó superado: en la mesa, de 175 a 610 ms la pequeña y de 2 a 6 s la grande (§12.2). Falta fijar uno nuevo para la preparación, en el cliente y en el servidor |
+| Objetos | Árboles como instancias del Terrain (instanciado por GPU) | Sin tope de dibujo; colliders solo en troncos del área jugable, hasta `max_colliders` (1500) |
 | NavMesh | Solo el área jugable: 600×600 m la pequeña, 1000×1000 m la grande (casi el triple de área); vóxel de 0,25 (hoy 0,167) | Horneado asíncrono por teselas durante la preparación; objetivo, menos de 5 s. Es el paso con más riesgo: hay que medirlo antes de cerrar nada (§11, H10) |
 | Agua | Planos sin física, la orilla somera con material propio | Despreciable |
 | Ticket | El recorte, con el anillo de 700 m: unos 54×54 u16 de alturas en la pequeña, 65×65 en la grande; las celdas y unas pocas polilíneas | Unos 7,4 KB en protobuf la pequeña (medido en la mesa) y unos 11 KB la grande (unos 2,5 bytes por muestra); nada que descargar |
 | Batalla grande | 2400×2400 m con el anillo de 700 (antes 1900×1900): alturas a 2 m (1201²) | Medido en la mesa (2026-11-25, 1000 m y anillo de 700): de 2 a 6 s generar en el navegador, con los alisados en ventana deslizante; con los de antes (1500 m, anillo de 200), 1 s generar y 1,2 s montar y 9105 árboles jugables en un sitio de colinas, por encima de `max_arboles`. Muy por encima de los 300 ms: el anillo podría generarse a menos resolución |
 
-Todo cabe en la fase de preparación, que ya existe: el cliente genera y hornea mientras el jugador ve la pantalla de preparación, y el minimapa de esa pantalla (`PantallasDeMundo.Preparacion.cs:408`, hoy siempre `DefaultMap`) se pinta de la misma rejilla de alturas y zonas.
+**Se genera mientras el jugador prepara la batalla** (autor, 2026-11-26). La preparación (BattlePrep) dura al menos 30 s, mientras cada jugador elige qué tropas entran y en qué orden, y le sigue otra pantalla de espera. La generación, el montaje y el NavMesh arrancan en cuanto llega el ticket, en segundo plano, en el cliente y en el servidor de batalla, y el jugador no espera nada propio del campo:
+- la lectura y la generación son C# puro y van en un hilo aparte; el horneado del NavMesh, asíncrono; solo crear los Terrain y los objetos va en el hilo principal, repartido entre fotogramas para que la pantalla de preparación no se trabe;
+- **el tope es acabar antes de que termine la preparación** (30 s), con margen: el objetivo sigue siendo unos 10 s, y el NavMesh se mide lo primero (H10);
+- el campo solo depende del recorte: una revisión del ticket que no lo cambie (incorporaciones, por ejemplo) no lo regenera;
+- si aun así un cliente no ha terminado al empezar la batalla, la batalla empieza igual (el servidor manda) y ese jugador entra cuando acaba, como uno que se incorpora.
+
+El minimapa de la preparación (`PantallasDeMundo.Preparacion.cs:408`, hoy siempre `DefaultMap`) se pinta de la misma rejilla de alturas y zonas, en cuanto está generada.
 
 ## 11. Decisiones y huecos
 
@@ -563,6 +587,16 @@ Del 2026-11-25:
 24. **El cauce sigue el relieve, sin paredes, y el agua sigue al cauce:** el río no se corta a nivel en la ladera; en las juntas, las aguas coinciden sin rampas de espuma (§6.3).
 25. **El río del campo es el del mundo:** el ancho de cada punto, a escala, y los meandros, brazos muertos y trenzas que el mundo tenga (§2.3).
 26. **El llano forzado conserva el agua del lugar** (§6.9).
+
+Del 2026-11-26:
+
+27. **Los dos bandos siempre se encuentran:** si el relieve o el bosque los separan, se talla una bajada por el camino más corto; el agua honda nunca se abre (§6.9).
+28. **Defensor pegado a un río sin vado:** el motor aparta el centro del recorte tierra adentro, hacia la orilla del defensor, hasta que quepan los dos spawns; la simetría se mantiene (§3).
+29. **Dos Terrain:** uno jugable de 513 vértices (área jugable más 100 m) y otro para el anillo a 8 m, sin collider (§4).
+30. **Unidad de las alturas:** el ticket lleva el u16 del relieve tal cual (0 a 65 535 = 0 a 1000 m del mundo, sin zoom); Conquest amplía al generar, en enteros de 32 bits en milímetros (§3, §8).
+31. **Árboles:** todos se dibujan; el tope es solo de colliders, y el interior del bosque cerrado es un bloque no transitable. Se afina sobre lo construido (§6.6).
+32. **El campo se genera durante la preparación:** arranca con el ticket, en segundo plano, y tiene que acabar antes de que termine BattlePrep (al menos 30 s); objetivo, unos 10 s (§10).
+33. **Distancias de salida:** se quedan como están (550 m y 900 m entre bandos). Con `baseSpeed` de 5 m/s, los bandos se encuentran en unos 55 s la pequeña y unos 90 s la grande andando, frente a los 15 minutos de batalla (`duracionMinutos.resto`); se revisa jugando.
 
 ### 11.2 Huecos por atender
 
@@ -618,7 +652,7 @@ Lo que el prototipo aún no hace: la forma propia de los tipos paso y colinas (v
 - **Con mucha agua, los spawns se acortan.** Con el 44 % de agua (por debajo de la mitad, así que el recorte no se desplaza), la franja de tierra solo deja los spawns a 150 m del centro, no a 275.
 - **La clase costa del artefacto es una franja ancha**, de varias celdas tierra adentro. El campo saca la arena de la distancia al agua, no de esa clase.
 - **El bosque cerrado a 4 m pasa de `max_arboles` enseguida:** un vado con bosque dio 3718 árboles en el área jugable, y un área jugable entera de bosque cerrado daría unos 19 000.
-- **Un defensor pegado a la orilla de un río sin vado no tiene spawns válidos.** Con los spawns a la misma distancia del centro y en lados opuestos, si el centro está a menos de la placa (unos 25 m) del agua honda, uno de los dos cae siempre al otro lado del río. Caso: `?x=1233.00&y=1772.38&ax=1231.72&ay=1773.92`, con el centro a 21 m del río; el campo cae al llano. Hace falta una regla: o el motor aparta el centro del río (como lo aparta del agua, §3), o en la ribera los spawns dejan de ser simétricos.
+- **Un defensor pegado a la orilla de un río sin vado no tiene spawns válidos.** Con los spawns a la misma distancia del centro y en lados opuestos, si el centro está a menos de la placa (unos 25 m) del agua honda, uno de los dos cae siempre al otro lado del río. Caso: `?x=1233.00&y=1772.38&ax=1231.72&ay=1773.92`, con el centro a 21 m del río; el campo cae al llano. Resuelto (autor, 2026-11-26): el motor aparta el centro del río (§3, punto 2).
 - **Un bosque denso es caro:** con bosque 0,90 salieron 18 611 árboles en el área jugable (52 020 en total), y generar tardó de 1,1 a 2,6 s.
 - **Generar tarda de 175 a 610 ms** en el navegador, por encima de los 300 ms de §10 cuando hay río. Con el anillo de 700 m y la batalla grande (2026-11-25) son de 2 a 6 s, ya con los alisados en ventana deslizante. El anillo se podría generar a menos resolución, si hace falta.
 - **Los meandros de antes tapaban el campo** (2026-11-25). Caso `?x=2400.05&y=1724.83&ax=2399.96&ay=1722.83&tipo=caravana_grande`: un río de 4,2 u con lazos más juntos que su propio ancho cubría el 41 % del área jugable de agua honda. Ningún par de spawns tenía las placas en seco, y el campo caía al llano y, además, perdía el río. Con los meandros nuevos del motor (§2.3) sale ribera con spawns y sin avisos; y el llano forzado ya conserva el agua (§6.9).
@@ -640,7 +674,8 @@ Lo que el prototipo aún no hace: la forma propia de los tipos paso y colinas (v
 | `radio_acento` | 3 u | Solo en la mesa: el entorno del acento |
 | `pendiente_max_transitable` | 45° | Por encima, acantilado (lo que admite el agente) |
 | `radio_placa` | 25 m | Placas llanas de spawn |
-| `paso_alturas` / celda de zonas | 2 m / 4 m | |
+| `paso_alturas` / celda de zonas | 2 m / 4 m | En la mesa. En Conquest, el paso del Terrain jugable (513 vértices: 1,6 m la pequeña, 2,3 m la grande) |
+| `margen_terreno` / `paso_anillo` | 100 m / 8 m | Lo que el Terrain jugable cubre fuera del área jugable, y la resolución del Terrain del anillo |
 | `relieve_colinas` | 15 m del mundo | |
 | `bosque_campo` / `bosque_cerrado` | 0,3 / 0,7 | Densidad media para el tipo bosque |
 | `umbral_bosque_claro` / `umbral_bosque_cerrado` | 0,25 / 0,6 | Por celda |
@@ -649,7 +684,7 @@ Lo que el prototipo aún no hace: la forma propia de los tipos paso y colinas (v
 | `ancho_vado_mundo` | 0,8 u (60 m) | Ancho del paso del vado en el mapa de mundo, por la escala del campo. Único paso |
 | `ancho_playa` / `ancho_somero` | 60 m / 25 m | |
 | `ancho_sendero` / `ancho_camino` / `ancho_calzada` | 3 / 5 / 8 m | |
-| `intentos_validacion` | 3 | |
-| `max_arboles` / `max_colliders` | 6000 / 1500 | |
+| `ancho_bajada` / `pendiente_bajada` | 18 m / 30° | La bajada que se talla cuando un bando no llega al otro (§6.9) |
+| `max_colliders` | 1500 | Tope de troncos con collider; los árboles dibujados no tienen tope (§6.6) |
 | `paso_decoracion` | 3 m | Decoración del suelo (mesa): un hueco cada tantos metros; cada hueco, una pieza o nada según el sitio |
 | `sotos_celda` / `sotos_probabilidad` | 70 m / 0,25 | Sotos donde el bosque del mundo no da árboles: uno como mucho por celda, con esa probabilidad (por la fertilidad) |
