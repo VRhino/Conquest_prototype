@@ -22,6 +22,10 @@ public sealed class InteriorDelMotor : MonoBehaviour
     /// 6×6 m y el campamento (radio de 60 u.l.) mide unos 120 m de lado a lado: a la escala del héroe de Synty.</summary>
     public const float MetrosPorUnidadLocal = 1f;
 
+    /// <summary>Los de lo que está montado: una plaza va con su arte (<see cref="CiudadPorDentro"/>) a 3 m por unidad, la escala del héroe
+    /// (Víctor, 2026-11-25); el campamento sigue en cuadros a 1 m hasta que le toque.</summary>
+    static float metros = MetrosPorUnidadLocal;
+
     /// <summary>Encender el recinto del feudo hecho a mano (`Map`) en lugar de quitarlo. Para verlo, a mano: no se usa en el flujo.</summary>
     public static bool ConRecintoDelFeudo;
 
@@ -43,7 +47,8 @@ public sealed class InteriorDelMotor : MonoBehaviour
     const float AltoMuro = 4f, AltoTorre = 6f;
 
     Scene escena;
-    GameObject recinto, raiz;
+    GameObject recinto, raiz, cuadros;
+    CiudadPorDentro.Montada ciudad;
     bool montado, panelAbierto;
     int versionMontada;
     /// <summary>Dónde quedó la puerta en el primer montaje: el héroe y la planta en unidades locales. Al volver a montar (cambió la planta) no se mueve.</summary>
@@ -53,6 +58,10 @@ public sealed class InteriorDelMotor : MonoBehaviour
     readonly Dictionary<string, Vector3> altoDe = new Dictionary<string, Vector3>();
     /// <summary>La pieza de cada edificio por su id, y la resaltada ahora (la de la ficha abierta).</summary>
     readonly Dictionary<string, Renderer> piezaDe = new Dictionary<string, Renderer>();
+    /// <summary>Las piezas de cada edificio montado con su arte, y las que están ahora en oro.</summary>
+    Dictionary<string, List<Renderer>> arteDe = new Dictionary<string, List<Renderer>>();
+    List<Renderer> enOro;
+    LuzDeLaPlaza luz;
     string resaltado;
     static readonly Color Oro = new Color32(0xff, 0xd2, 0x4a, 0xff);
 
@@ -129,7 +138,21 @@ public sealed class InteriorDelMotor : MonoBehaviour
     void Resaltar(string id)
     {
         if (resaltado != null && piezaDe.TryGetValue(resaltado, out var antes) && antes != null) antes.SetPropertyBlock(null);
+        if (enOro != null) foreach (var x in enOro) if (x != null) x.SetPropertyBlock(null);
+        enOro = null;
         resaltado = id;
+        // con su arte: todas sus piezas, con el tono de su material hacia el oro
+        if (id != null && arteDe.TryGetValue(id, out enOro))
+        {
+            foreach (var x in enOro)
+            {
+                if (x == null || x.sharedMaterial == null || !x.sharedMaterial.HasProperty("_Tono")) continue;
+                var b = new MaterialPropertyBlock();
+                b.SetColor("_Tono", Color.Lerp(x.sharedMaterial.GetColor("_Tono"), Oro * 1.6f, 0.45f));
+                x.SetPropertyBlock(b);
+            }
+            return;
+        }
         if (id == null || !piezaDe.TryGetValue(id, out var r) || r == null) return;
         var bloque = new MaterialPropertyBlock();
         bloque.SetColor("_BaseColor", Color.Lerp(r.sharedMaterial.GetColor("_BaseColor"), Oro, 0.55f));
@@ -155,11 +178,26 @@ public sealed class InteriorDelMotor : MonoBehaviour
     /// caja gris más baja; las torres, más altas que el muro; lo comprometido sin levantar, la zanja. Al cambiar la planta se rehace igual.</summary>
     void Montar(SelectorDePersonaje.InteriorParaVer interior)
     {
-        if (raiz != null) Destroy(raiz);
         altoDe.Clear();
         piezaDe.Clear();
-        raiz = new GameObject(interior.Edificios.Any(e => e.Id != null) ? "Plaza del motor" : "Campamento del motor");
-        SceneManager.MoveGameObjectToScene(raiz, escena);
+        bool plaza = interior.Edificios.Any(e => e.Id != null);
+        metros = plaza ? CiudadPorDentro.Metros : MetrosPorUnidadLocal;
+        // La plaza con su arte no se rehace al cambiar la planta (Víctor, 2026-11-26): su raíz y su ciudad se quedan y `CiudadPorDentro` las
+        // pone al día; solo se rehacen los cuadros (lo que aún no tiene modelo, la muralla, las zonas), que son pocos y van aparte. El
+        // campamento, todo de cuadros, se rehace entero como siempre.
+        if (raiz != null && (!plaza || ciudad == null)) { Destroy(raiz); raiz = null; cuadros = null; ciudad = null; }
+        if (raiz == null)
+        {
+            raiz = new GameObject(plaza ? "Plaza del motor" : "Campamento del motor");
+            SceneManager.MoveGameObjectToScene(raiz, escena);
+        }
+        if (cuadros != null && cuadros != raiz) Destroy(cuadros);
+        cuadros = raiz;
+        if (plaza)
+        {
+            cuadros = new GameObject("Cuadros");
+            cuadros.transform.SetParent(raiz.transform, false);
+        }
         var todo = interior.Edificios.Concat(interior.Calles).Concat(interior.Empalizada).Concat(interior.Puerta).Concat(interior.Muralla).ToList();
         if (todo.Count == 0) { Debug.LogWarning("[Interior] el sitio no trae planta: queda el suelo del feudo."); return; }
         double minX = todo.Min(r => r.X - r.Ancho / 2), maxX = todo.Max(r => r.X + r.Ancho / 2);
@@ -170,40 +208,60 @@ public sealed class InteriorDelMotor : MonoBehaviour
             puertaY = interior.Puerta.Count > 0 ? interior.Puerta.Average(r => r.Y) : maxY;
         }
         Vector3 A(double x, double y, float alto) =>
-            origen + new Vector3((float)(x - puertaX) * MetrosPorUnidadLocal, alto, -(float)(y - puertaY) * MetrosPorUnidadLocal);
+            origen + new Vector3((float)(x - puertaX) * metros, alto, -(float)(y - puertaY) * metros);
 
+        // La plaza, con su arte: el suelo, las calles, lo que tiene receta y el relleno de lo libre. Lo demás (lo que está en cola o en obra,
+        // lo que aún no tiene modelo, la muralla) sigue en cuadros.
+        if (plaza && ciudad == null) ciudad = CiudadPorDentro.Montar(interior, A, raiz.transform);
+        else if (plaza) CiudadPorDentro.Actualizar(ciudad, interior, A);
+        arteDe = ciudad?.PiezasDe ?? new Dictionary<string, List<Renderer>>();
+        // la luz de la plaza, con la hora del mundo: una vez (cuelga de este objeto, no de lo que se vuelve a montar)
+        if (ciudad != null && luz == null) luz = LuzDeLaPlaza.Poner(transform, interior.AhoraMundo);
+        // el suelo, hijo directo del interior, como el de cuadros: por él se orientan las pruebas que llevan al héroe andando
+        if (ciudad != null) ciudad.Suelo.transform.SetParent(raiz.transform, true);
+        enOro = null;
         const double margen = 30;
-        Caja(raiz, "Suelo", A((minX + maxX) / 2, (minY + maxY) / 2, -0.25f),
-            new Vector3((float)(maxX - minX + 2 * margen), 0.5f, (float)(maxY - minY + 2 * margen)) * MetrosPorUnidadLocal, Suelo, true);
-        foreach (var c in interior.Calles) Plano(raiz, "Calle", c, A, 0.02f, Calle);
-        foreach (var e in interior.Edificios)
+        if (ciudad == null)
         {
+            Caja(cuadros, "Suelo", A((minX + maxX) / 2, (minY + maxY) / 2, -0.25f),
+                new Vector3((float)(maxX - minX + 2 * margen), 0.5f, (float)(maxY - minY + 2 * margen)) * metros, Suelo, true);
+            foreach (var c in interior.Calles) Plano(cuadros, "Calle", c, A, 0.02f, Calle);
+        }
+        for (int indice = 0; indice < interior.Edificios.Count; indice++)
+        {
+            var e = interior.Edificios[indice];
+            if (ciudad != null && ciudad.Hechos.Contains(indice))
+            {
+                if (e.Id != null) altoDe[e.Id] = A(e.X, e.Y, 7f);
+                continue;
+            }
             var (color, alto) = Piezas.TryGetValue(e.Tipo, out var p) ? p : (Edificios.Color(e.Tipo), Edificios.Alto(e.Tipo));
             GameObject pieza;
-            if (e.Estado == "cola") { pieza = Plano(raiz, e.Tipo + " (en cola)", e, A, 0.08f, EnCola); alto = 0.08f; }
-            else if (e.Estado == "obra" && alto > 0) { alto *= 0.45f; pieza = Caja(raiz, e.Tipo + " (en obra)", A(e.X, e.Y, alto / 2), Tamano(e, alto), EnObra, true); }
-            else if (alto <= 0) pieza = Plano(raiz, e.Tipo, e, A, 0.04f, e.Estado == "obra" ? EnObra : color);
-            else pieza = Caja(raiz, e.Tipo, A(e.X, e.Y, alto / 2), Tamano(e, alto), color, true);
+            if (e.Estado == "cola") { pieza = Plano(cuadros, e.Tipo + " (en cola)", e, A, 0.08f, EnCola); alto = 0.08f; }
+            else if (e.Estado == "obra" && alto > 0) { alto *= 0.45f; pieza = Caja(cuadros, e.Tipo + " (en obra)", A(e.X, e.Y, alto / 2), Tamano(e, alto), EnObra, true); }
+            else if (alto <= 0) pieza = Plano(cuadros, e.Tipo, e, A, 0.04f, e.Estado == "obra" ? EnObra : color);
+            else pieza = Caja(cuadros, e.Tipo, A(e.X, e.Y, alto / 2), Tamano(e, alto), color, true);
             if (e.Id == null) continue;
             altoDe[e.Id] = A(e.X, e.Y, Mathf.Max(alto, 0.5f) + 1f);
             piezaDe[e.Id] = pieza.GetComponent<Renderer>();
         }
         foreach (var r in interior.Empalizada)
-            Caja(raiz, "Empalizada", A(r.X, r.Y, AltoEmpalizada / 2), Tamano(r, AltoEmpalizada), Empalizada, true);
+            Caja(cuadros, "Empalizada", A(r.X, r.Y, AltoEmpalizada / 2), Tamano(r, AltoEmpalizada), Empalizada, true);
         foreach (var r in interior.Muralla)
         {
+            if (ciudad != null && r.Nivel <= CiudadPorDentro.NivelDeMurallaConArte) continue;   // la empalizada ya va con su arte
             var color = ColorMuralla[Mathf.Clamp(r.Nivel, 0, ColorMuralla.Length - 1)];
-            if (r.Estado == "plan") Plano(raiz, "Muralla (sin levantar)", r, A, 0.05f, Zanja);
-            else if (r.Tipo == "puerta") Plano(raiz, "Puerta de la muralla", r, A, 0.03f, Calle);
+            if (r.Estado == "plan") Plano(cuadros, "Muralla (sin levantar)", r, A, 0.05f, Zanja);
+            else if (r.Tipo == "puerta") Plano(cuadros, "Puerta de la muralla", r, A, 0.03f, Calle);
             else if (r.Tipo == "torre")
-                Caja(raiz, "Torre", A(r.X, r.Y, AltoTorre / 2), new Vector3((float)r.Ancho * 1.2f, AltoTorre, (float)r.Alto * 1.2f) * MetrosPorUnidadLocal, color, true);
-            else Caja(raiz, "Muralla", A(r.X, r.Y, AltoMuro / 2), Tamano(r, AltoMuro), color, true);
+                Caja(cuadros, "Torre", A(r.X, r.Y, AltoTorre / 2), new Vector3((float)r.Ancho * 1.2f * metros, AltoTorre, (float)r.Alto * 1.2f * metros), color, true);
+            else Caja(cuadros, "Muralla", A(r.X, r.Y, AltoMuro / 2), Tamano(r, AltoMuro), color, true);
         }
         // La puerta, sin colisión: por ahí se sale (la salida de verdad es la ventana «Salir al mundo»).
-        foreach (var r in interior.Puerta) Plano(raiz, "Puerta", r, A, 0.03f, Calle);
+        foreach (var r in interior.Puerta) Plano(cuadros, "Puerta", r, A, 0.03f, Calle);
         // Las zonas donde se interactúa, como el herrero de Conquest: un collider disparador alrededor de la pieza, la tecla F y un cartel.
         foreach (var e in interior.Edificios.Where(x => x.Zona != null))
-            Zona(raiz, e.Zona, A(e.X, e.Y, 1.5f), new Vector3((float)e.Ancho + 5, 3, (float)e.Alto + 5) * MetrosPorUnidadLocal, new Vector3((float)e.Ancho, 3, (float)e.Alto) * MetrosPorUnidadLocal);
+            Zona(cuadros, e.Zona, A(e.X, e.Y, 1.5f), new Vector3((float)e.Ancho + 5, 3, (float)e.Alto + 5) * metros, new Vector3((float)e.Ancho, 3, (float)e.Alto) * metros);
         // La de la puerta, justo fuera (el héroe aparece en el hueco: hay que salir para que se abra). Fuera es hacia donde cae la puerta desde
         // el centro de todo, por el lado que más pesa.
         double dx = puertaX - (minX + maxX) / 2, dy = puertaY - (minY + maxY) / 2;
@@ -212,17 +270,17 @@ public sealed class InteriorDelMotor : MonoBehaviour
         {
             var fuera = (fx != 0 ? r.Ancho : r.Alto) / 2 + 3;
             var ancho = (fx != 0 ? r.Alto : r.Ancho) + 2;
-            Zona(raiz, "puerta", A(r.X + fx * fuera, r.Y + fy * fuera, 1.5f), (fx != 0 ? new Vector3(4, 3, (float)ancho) : new Vector3((float)ancho, 3, 4)) * MetrosPorUnidadLocal);
+            Zona(cuadros, "puerta", A(r.X + fx * fuera, r.Y + fy * fuera, 1.5f), (fx != 0 ? new Vector3(4, 3, (float)ancho) : new Vector3((float)ancho, 3, 4)) * metros);
         }
         if (recinto != null && !ConRecintoDelFeudo) recinto.SetActive(false);
         Debug.Log($"[Interior] montado: {interior.Edificios.Count} piezas, {interior.Calles.Count} calles, {interior.Empalizada.Count} tramos de empalizada, {interior.Muralla.Count} celdas de muralla; puerta en ({puertaX:0.#}, {puertaY:0.#}) u.l.");
     }
 
-    static Vector3 Tamano(SelectorDePersonaje.PiezaDePlanta r, float alto) => new Vector3((float)r.Ancho, alto, (float)r.Alto) * MetrosPorUnidadLocal;
+    static Vector3 Tamano(SelectorDePersonaje.PiezaDePlanta r, float alto) => new Vector3((float)r.Ancho * metros, alto, (float)r.Alto * metros);
 
     static GameObject Plano(GameObject raiz, string nombre, SelectorDePersonaje.PiezaDePlanta r, System.Func<double, double, float, Vector3> A, float alto, string color)
     {
-        var go = Caja(raiz, nombre, A(r.X, r.Y, alto / 2), new Vector3((float)r.Ancho * MetrosPorUnidadLocal, alto, (float)r.Alto * MetrosPorUnidadLocal), color, false);
+        var go = Caja(raiz, nombre, A(r.X, r.Y, alto / 2), new Vector3((float)r.Ancho * metros, alto, (float)r.Alto * metros), color, false);
         go.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         return go;
     }

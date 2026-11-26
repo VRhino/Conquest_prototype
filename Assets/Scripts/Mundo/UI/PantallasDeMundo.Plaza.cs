@@ -268,6 +268,7 @@ namespace ConquestTactics.Mundo.UI
                 interior.Version++;
             }
             Planta(plaza);
+            interior.AhoraMundo = () => AhoraMs;
             interior.AlInteractuar = zona =>
             {
                 if (zona == "puerta") VentanaDeSalida(null, PlazaActual(plaza.Id)?.Nombre ?? nombre, plaza.Id);
@@ -453,7 +454,8 @@ namespace ConquestTactics.Mundo.UI
         static string FirmaDePlanta(Asentamiento a) =>
             string.Join(";", a.Edificios.Select(e => $"{e.Id}:{(int)e.Estado}:{NivelInterno(e)}:{e.Mejora?.NivelObjetivo}"))
             + "|" + string.Join(";", a.Recintos.Select(r => $"{r.Id}:{r.Nivel}:{r.Avance}:{r.Celdas.Count}:{r.Mejoradas}"))
-            + "|" + (a.Trazado?.Calles.Count ?? 0) + ":" + (a.Trazado?.Caminos.Count ?? 0);
+            + "|" + (a.Trazado?.Calles.Count ?? 0) + ":" + (a.Trazado?.Caminos.Count ?? 0)
+            + "|" + a.Nivel + ":" + a.Ascenso?.NivelObjetivo + ":" + a.EstiloEpoca?.Era + ":" + a.EstiloEpoca?.Grado;
 
         /// <summary>La planta de la plaza para FeudoScene: los edificios de dentro (centro y huella en unidades locales), las calles y los caminos, y la
         /// muralla celda a celda (`Recinto.celdas`, en celdas de `unidades_por_celda`: lo levantado son las `avance` primeras). La puerta: la de la
@@ -461,6 +463,11 @@ namespace ConquestTactics.Mundo.UI
         static void LlenarPlanta(SelectorDePersonaje.InteriorParaVer interior, Asentamiento a)
         {
             interior.Edificios.Clear(); interior.Calles.Clear(); interior.Muralla.Clear(); interior.Puerta.Clear();
+            interior.NivelDePlaza = Math.Max(1, (int)a.Nivel);
+            interior.NivelObjetivo = a.Ascenso != null ? (int)a.Ascenso.NivelObjetivo : 0;
+            interior.AscensoDesdeMs = a.Ascenso?.IniciadoEnMs ?? 0; interior.AscensoHastaMs = a.Ascenso?.CompletaEnMs ?? 0;
+            interior.Era = a.EstiloEpoca != null ? Math.Max(1, (int)a.EstiloEpoca.Era) : 1;
+            interior.Grado = a.EstiloEpoca != null ? Math.Max(1, (int)a.EstiloEpoca.Grado) : 3;
             foreach (var e in Internos(a))
                 interior.Edificios.Add(new SelectorDePersonaje.PiezaDePlanta
                 {
@@ -489,12 +496,16 @@ namespace ConquestTactics.Mundo.UI
                 }
             if (puerta == null)
             {
-                // Sin muralla: el extremo del camino que más se aleja del centro (el centro urbano está en el origen del espacio local).
-                foreach (var r in trazado.Caminos)
+                // Sin muralla, se entra por el borde de lo construido, no por lo más lejano (Víctor, 2026-11-25: aparecía en la granja de las
+                // afueras): de los cabos de las calles y los caminos, el que queda más cerca de ese borde. El borde es hasta donde llega el
+                // 90 % de los edificios (las granjas sueltas no cuentan, como en el prototipo); el centro urbano está en el origen.
+                var alcances = interior.Edificios.Select(e => Math.Sqrt(e.X * e.X + e.Y * e.Y) + Math.Max(e.Ancho, e.Alto) / 2).OrderBy(d => d).ToList();
+                double borde = alcances.Count > 0 ? alcances[Math.Min(alcances.Count - 1, (int)(alcances.Count * 0.9))] : 0, mejor = double.MaxValue;
+                foreach (var r in trazado.Calles.Concat(trazado.Caminos))
                     foreach (var (x, y) in new[] { (r.X + 1.5, r.Y + 1.5), (r.X + r.Ancho - 1.5, r.Y + r.Alto - 1.5) })
                     {
-                        var d = Math.Sqrt(x * x + y * y);
-                        if (d > masLejos) { masLejos = d; puerta = new SelectorDePersonaje.PiezaDePlanta { Tipo = "puerta", X = x, Y = y, Ancho = T, Alto = T }; }
+                        var lejos = Math.Abs(Math.Sqrt(x * x + y * y) - borde);
+                        if (lejos < mejor) { mejor = lejos; puerta = new SelectorDePersonaje.PiezaDePlanta { Tipo = "puerta", X = x, Y = y, Ancho = T, Alto = T }; }
                     }
             }
             interior.Puerta.Add(puerta ?? new SelectorDePersonaje.PiezaDePlanta { Tipo = "puerta", X = 0, Y = Math.Max(trazado.RadioUl, 30), Ancho = T, Alto = T });

@@ -76,6 +76,11 @@ namespace ConquestTactics.Mundo
                 Empalizada = new List<PiezaDePlanta>(), Puerta = new List<PiezaDePlanta>();
             /// <summary>La muralla de una plaza, celda a celda (`Recinto.celdas`: Tipo «muro», «torre» o «puerta»).</summary>
             public List<PiezaDePlanta> Muralla = new List<PiezaDePlanta>();
+            /// <summary>Lo que manda el motor para vestir la plaza (`Asentamiento.nivel`, `ascenso` y `estilo_epoca`): su nivel, el ascenso en
+            /// curso (`NivelObjetivo` 0 si no hay; sus tiempos en milisegundos de mundo) y la Era de su Facción con su grado. Con ello el arte
+            /// reparte el estilo y la época edificio a edificio (`EstiloDeCiudad`), como el prototipo.</summary>
+            public int NivelDePlaza = 1, NivelObjetivo, Era = 1, Grado = 3;
+            public double AscensoDesdeMs, AscensoHastaMs;
             /// <summary>Sube cuando cambia la planta (una obra que acaba, un edificio nuevo en la cola): FeudoScene la vuelve a montar.</summary>
             public int Version;
             /// <summary>Lo pone FeudoScene: dónde cae en pantalla (de 0 a 1, desde arriba a la izquierda) lo alto de una pieza por su id; null si no
@@ -89,6 +94,8 @@ namespace ConquestTactics.Mundo
             public string ZonaCercana;
             /// <summary>El héroe pulsó la tecla de interactuar en una zona (la abre la interfaz).</summary>
             public Action<string> AlInteractuar;
+            /// <summary>El reloj del mundo, en milisegundos (`Sesion.AhoraMundo`): de él saca FeudoScene la hora del día para la luz de la plaza.</summary>
+            public Func<double> AhoraMundo;
             /// <summary>Hay un panel abierto: el héroe no anda, la cámara no gira y el ratón queda libre (como un diálogo de Conquest).</summary>
             public bool PanelAbierto;
         }

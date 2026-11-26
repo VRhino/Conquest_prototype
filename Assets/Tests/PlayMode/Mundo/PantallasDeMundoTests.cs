@@ -1336,7 +1336,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             for (var x = meta.Value; x != inicio; x = previo[x]) camino.Add(Centro(x.Item1, x.Item2));
             camino.Reverse();
             Debug.Log($"[Prueba] camino hasta {zona}: {camino.Count * paso:0} m aprox.");
-            var fin = Time.realtimeSinceStartup + 60;
+            // El plazo, según lo que haya que andar (la plaza con su arte va a 3 m por unidad: los caminos son tres veces más largos), a 2 m/s de sobra.
+            var fin = Time.realtimeSinceStartup + Mathf.Max(60, camino.Count * paso / 2f);
             int siguiente = 0;
             var atasco = (pos: heroe.position, t: Time.realtimeSinceStartup);
             while (!llegado())
