@@ -251,7 +251,7 @@ namespace ConquestTactics.Mundo.Mapa
             vado = PinturaDelMapa.VadoComoTrecho ? terreno.Cauces?.SomeroEn(x, y, 1.2) ?? 0
                 : 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(1.6f, 2.2f, (float)(terreno.Cauces?.AUnVado(x, y) ?? double.PositiveInfinity)));
             if (relieve.AguaEn(x, y)) return vado;
-            double c = terreno.Cauces?.ACauce(x, y, 2) ?? double.PositiveInfinity;
+            double c = terreno.Cauces?.ACauce(x, y, 2, CampoDeRios.MedioPintadoDeCerca) ?? double.PositiveInfinity;
             float s = double.IsInfinity(c) ? 1 : Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-0.1f, 0.6f, (float)c));
             for (int k = 0; k < 8; k++)
             {

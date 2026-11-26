@@ -29,10 +29,14 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             if (!Directory.Exists(Path.Combine(Application.persistentDataPath, "mundo", "artefacto")))
                 Assert.Ignore("no hay mundo en disco: entra antes una vez al mundo con el servidor");
             EditorSceneManager.OpenScene(Escena, OpenSceneMode.Single);
+            // (el mundo de la partida, no el del generador que prefiere `BancoDelMapa` si está: las medidas son de aquel)
+            var antes = Environment.GetEnvironmentVariable("MUNDO_BANCO");
+            Environment.SetEnvironmentVariable("MUNDO_BANCO", "cache");
             yield return new EnterPlayMode();
             // (en otro iterador: con la recarga del dominio al entrar en Play, las variables capturadas de este no siguen)
             yield return Comprobar();
             yield return new ExitPlayMode();
+            Environment.SetEnvironmentVariable("MUNDO_BANCO", antes);
             Assert.That(MaquetasDelMapa.Estilo, Is.EqualTo(EstiloDeAsentamientos.Prototipo), "fuera de Play, el estilo vuelve al del código");
         }
 

@@ -5,6 +5,9 @@
 //    en las crestas; reflejo del cielo de verdad (`ColorDelCielo`); color de turquesa en lo somero a azul hondo, con variación; en la orilla,
 //    una banda de espuma dibujada que entra y sale y, en el mar, la rompiente: líneas de espuma que avanzan hacia la orilla, rotas con ruido.
 //    Los lagos, más calmados (olas más pequeñas y lentas), un punto más verdes y sin rompiente.
+//    Los ríos (26-11, `CampoDeRios`) van en la misma lámina: UV1.y 1 en el río, UV1.x lo somero del trecho de vado; UV2.xy el rumbo de la
+//    corriente y UV2.z lo rápido que baja. Sus ondas, alargadas, corren río abajo con la corriente (BronzeAgeClient, `agua.ts`: dos fases de
+//    3 s fundidas, a 1,1 u/s), con vetas de espuma, aguas blancas donde baja deprisa y alguna roca; su color, el de la cinta de antes.
 //  * Río (1): UV0 x de orilla a orilla, y los u andados, z lo rápido que baja (aguas blancas), w lo cerca de la desembocadura (abanico que se
 //    funde con el mar). Ondas alargadas en el sentido de la corriente, más deprisa en el centro, unas pocas vetas finas de espuma, alguna roca
 //    con espuma; el lecho se ve a través en los bordes y el agua es más oscura en el centro; el borde, irregular.
@@ -55,8 +58,8 @@ Shader "Conquest/MapaAgua"
                 float4 _Somero, _Turquesa, _Hondo, _Espuma, _OrillaMojada, _Vado;
             CBUFFER_END
 
-            struct Entrada { float4 pos : POSITION; float4 uv : TEXCOORD0; float2 uv1 : TEXCOORD1; };
-            struct Salida { float4 pos : SV_POSITION; float4 uv : TEXCOORD0; float3 mundo : TEXCOORD1; float somero : TEXCOORD2; };
+            struct Entrada { float4 pos : POSITION; float4 uv : TEXCOORD0; float2 uv1 : TEXCOORD1; float4 uv2 : TEXCOORD2; float2 uv3 : TEXCOORD3; };
+            struct Salida { float4 pos : SV_POSITION; float4 uv : TEXCOORD0; float3 mundo : TEXCOORD1; float somero : TEXCOORD2; float4 rio : TEXCOORD3; float cl : TEXCOORD4; float2 eje : TEXCOORD5; };
 
             Salida Vert(Entrada e)
             {
@@ -65,6 +68,12 @@ Shader "Conquest/MapaAgua"
                 s.pos = TransformWorldToHClip(s.mundo);
                 s.uv = e.uv;
                 s.somero = e.uv1.x;
+                // (en la lámina: x 1 en el río, yz el rumbo de la corriente, w lo rápido)
+                s.rio = _Modo < 0.5 ? float4(e.uv1.y, e.uv2.xyz) : 0;
+                // (w: 1 en el eje del río, 0 en su orilla, negativo fuera; interpolado, corta el borde del agua por píxel en una curva limpia)
+                s.cl = _Modo < 0.5 ? e.uv2.w : 0;
+                // (las coordenadas del río: lo andado a lo largo y la distancia con signo a su eje, en u)
+                s.eje = _Modo < 0.5 ? e.uv3 : 0;
                 return s;
             }
 
@@ -76,6 +85,16 @@ Shader "Conquest/MapaAgua"
                 float4 m = SAMPLE_TEXTURE2D(_Olas, sampler_Olas, r);
                 float2 n = m.xy * 2 - 1;
                 return float3(c * n.x + s * n.y, -s * n.x + c * n.y, m.a); // de vuelta al giro del mundo
+            }
+
+            // Las ondas del río en la lámina, en las coordenadas del río (a lo largo `a`, de través `b`, u): las de la cinta de antes, alargadas en
+            // el sentido de la corriente. Devuelve la normal en el plano del mundo (xy, girada con el rumbo `dir`) y la altura de la segunda capa.
+            float3 OndasDelRio(float a, float b, float2 dir, float2 lado, float fuerza)
+            {
+                float4 m1 = SAMPLE_TEXTURE2D(_Olas, sampler_Olas, float2(b * 0.6, a * 0.18));
+                float4 m2 = SAMPLE_TEXTURE2D(_Olas, sampler_Olas, float2(b * 1.1 + 0.37, a * 0.33));
+                float2 n = ((m1.xy * 2 - 1) * float2(0.35, 1) * 0.6 + (m2.xy * 2 - 1) * float2(0.35, 1) * 0.4) * 0.55 * fuerza;
+                return float3(n.x * lado + n.y * dir, m2.a);
             }
 
             half4 Frag(Salida s) : SV_Target
@@ -100,6 +119,9 @@ Shader "Conquest/MapaAgua"
                 }
 
                 bool lago = modo == 0 && s.uv.y > 0.5;
+                // el río en la lámina (0 mar y lagos, 1 río; entre medias, la boca) y su corriente
+                float enRio = modo == 0 ? saturate(s.rio.x) : 0;
+                float2 dir = length(s.rio.yz) > 0.01 ? normalize(s.rio.yz) : float2(1, 0), lado = float2(-dir.y, dir.x);
                 float prof, rapido = 0, boca = 0, centro = 0, barra = 0;
                 float3 o2 = float3(0, 0, 0.5), o3 = float3(0, 0, 0.5);
                 float2 g;
@@ -113,6 +135,21 @@ Shader "Conquest/MapaAgua"
                     o2 = Capa(pu, 3.7, 2.1, float2(-0.02, 0.016) * vel, t);
                     if (_Detalle > 0.5) o3 = Capa(pu, 1.3, 4.0, float2(0.035, -0.03) * vel, t);
                     g = (o1.xy * 0.55 + o2.xy * 0.35 + o3.xy * 0.25 * cerca) * calma * variacion;
+                    if (enRio > 0.001)
+                    {
+                        // El río: dos fases que corren con la corriente y vuelven a empezar cada 3 s, fundidas para que no se vea el salto.
+                        rapido = s.rio.w;
+                        // De orilla a orilla, como la cinta: el centro (1 en el eje, 0 en la orilla) y la hondura aparente que da el color, con lo
+                        // tallado si es más (los ríos anchos); así el fino también se lee azul.
+                        centro = saturate(1 - (1 - saturate(s.cl)) * (1 - saturate(s.cl)));
+                        prof = lerp(prof, max(prof, 1.5 * centro * lerp(1, 0.2, s.somero)), enRio);
+                        float f1 = frac(t / 3.0), f2 = frac(t / 3.0 + 0.5);
+                        float corre = (1.1 * 3.0) * lerp(0.6, 1.0, centro) * (1 + rapido);
+                        float fuerza = 1 + rapido * 1.5;
+                        float3 w = lerp(OndasDelRio(s.eje.x - corre * f1, s.eje.y, dir, lado, fuerza), OndasDelRio(s.eje.x - corre * f2, s.eje.y, dir, lado, fuerza), abs(1 - 2 * f1));
+                        g = lerp(g, w.xy, enRio);
+                        o2 = lerp(o2, float3(0, 0, w.z), enRio);
+                    }
                 }
                 else
                 {
@@ -141,6 +178,37 @@ Shader "Conquest/MapaAgua"
                     base *= lerp(0.92, 1.06, Nubes(pu * 0.08 + 7.7));
                     if (lago) base = lerp(base, base * float3(0.86, 1.04, 0.9), 0.7);
                     alfa = lerp(0.42, 0.9, smoothstep(0, 1.4, prof));
+                    if (enRio > 0.001)
+                    {
+                        // El río: el verde azulado de la cinta, más oscuro en lo hondo; en lo somero se ve el lecho. En la boca, al del mar o el lago.
+                        float3 delRio = lerp(_Somero.rgb * float3(0.86, 0.95, 0.88), _Hondo.rgb * float3(0.9, 1.05, 0.95), smoothstep(0.3, 1.6, prof) * 0.75);
+                        float alfaRio = lerp(0.5, 0.86, smoothstep(0.0, 1.3, prof)); // (menos transparente que la cinta: el lecho claro de lo estrecho no lo blanquea)
+                        if (s.somero > 0.001)
+                        {
+                            // El trecho de vado: lecho de guijarros a la vista bajo agua clara, y en el núcleo la barra (como en la cinta).
+                            float g1 = Nubes(pu * 3.0), g2 = Nubes(pu * 7.0 + 2.3);
+                            float3 lecho = lerp(_Vado.rgb * lerp(0.8, 1.1, g2), _Somero.rgb, 0.3);
+                            delRio = lerp(delRio, lecho, s.somero * 0.6);
+                            alfaRio = lerp(alfaRio, 0.7, s.somero);
+                            if (_Barra > 0.5)
+                            {
+                                float contorno = Nubes(pu * 1.3 + 4.1) * 0.5 + Nubes(pu * 4.0 + 1.7) * 0.5;
+                                barra = smoothstep(0.86, 0.93, s.somero + (contorno - 0.5) * 0.3);
+                                float piedra = smoothstep(0.66, 0.7, g1), aro = smoothstep(0.58, 0.64, g1) * (1 - piedra);
+                                float3 grava = lerp(_Vado.rgb * lerp(0.9, 1.15, g2), _Somero.rgb, 0.08);
+                                grava = lerp(grava, _Vado.rgb * 1.2, piedra);
+                                grava = lerp(grava, _Espuma.rgb, aro * 0.7);
+                                delRio = lerp(delRio, grava, barra);
+                                alfaRio = lerp(alfaRio, 0.97, barra);
+                            }
+                        }
+                        // el borde, irregular a escala pequeña y cortado por píxel donde `cl` pasa por 0
+                        float r1 = Nubes(pu * 2.3);
+                        alfaRio *= smoothstep(0.0, 0.1 + 0.16 * r1, 0.5 * s.cl);
+                        base = lerp(base, delRio, enRio);
+                        alfa = lerp(alfa, alfaRio, enRio);
+                        barra *= enRio;
+                    }
                 }
                 else
                 {
@@ -201,8 +269,8 @@ Shader "Conquest/MapaAgua"
                 R.y = abs(R.y);
                 float3 cielo = ColorDelCielo(R, _CieloCenit.rgb, _CieloHorizonte.rgb, _CieloSuelo.rgb, _CieloSol.xyz);
                 float fres = pow(1 - saturate(dot(N, V)), 4);
-                c = lerp(c, cielo, fres * (modo == 0 ? 0.6 : 0.35));
-                if (modo == 0) alfa = lerp(alfa, 1, fres * 0.5);
+                c = lerp(c, cielo, fres * (modo == 0 ? lerp(0.6, 0.35, enRio) : 0.35));
+                if (modo == 0) alfa = lerp(alfa, 1, fres * 0.5 * (1 - enRio));
                 // Destellos del sol en las crestas de las olas pequeñas (chispean sin rejilla).
                 float3 H = normalize(sol.direction + V);
                 float especular = pow(saturate(dot(N, H)), 260);
@@ -214,14 +282,31 @@ Shader "Conquest/MapaAgua"
                 {
                     // La banda de espuma de la orilla: un borde dibujado que entra y sale (ruido y un vaivén lento).
                     float limite = (lago ? 0.05 : 0.09) + 0.1 * Nubes(pu * 0.9 + float2(t * 0.02, 0)) + 0.03 * sin(t * 0.8 + dot(pu, float2(0.7, 0.4)));
-                    espuma = 1 - smoothstep(limite - 0.025, limite, prof);
-                    if (!lago)
+                    espuma = (1 - smoothstep(limite - 0.025, limite, prof)) * (1 - enRio);
+                    if (!lago && enRio < 0.5)
                     {
                         // La rompiente: líneas que avanzan hacia la orilla siguiendo lo hondo, rotas con ruido.
                         float fase = prof * 7.0 + t * 0.35;
                         float linea = smoothstep(0.82, 0.96, sin(fase * 6.2832) * 0.5 + 0.5);
                         float rota = smoothstep(0.38, 0.62, Nubes(pu * 1.4 + float2(t * 0.02, 0)));
-                        espuma = max(espuma, linea * rota * (1 - smoothstep(0.12, 0.6, prof)) * 0.85);
+                        espuma = max(espuma, linea * rota * (1 - smoothstep(0.12, 0.6, prof)) * 0.85 * (1 - enRio));
+                    }
+                    if (enRio > 0.001)
+                    {
+                        // El río (como la cinta): vetas finas que siguen la corriente, aguas blancas donde baja deprisa, rizos en el vado, espuma
+                        // donde el agua sale de la barra y alguna roca con su aro.
+                        float a = s.eje.x, b = s.eje.y;
+                        float veta = smoothstep(0.8, 0.86, Nubes(float2(b * 2.5, a * 0.22 - t * 0.5)));
+                        float er = veta * 0.4 * centro + rapido * smoothstep(0.55, 0.72, Nubes(float2(b * 4.5, a * 1.6 - t * 1.6))) * 0.8;
+                        er = max(er, s.somero * smoothstep(0.68, 0.78, Nubes(float2(b * 3.5, a * 0.9 - t * 1.1))) * 0.35);
+                        er = max(er, barra * (1 - barra) * 4 * smoothstep(0.5, 0.7, Nubes(float2(b * 4.5, a * 2.0 - t * 1.4))) * 0.6);
+                        float r = Nubes(pu * lerp(1.1, 3.0, s.somero) + 9.1) * lerp(smoothstep(0.35, 0.0, 0.5 * (1 - saturate(s.cl))), 1, s.somero);
+                        float umbral = lerp(0.8, 0.74, s.somero);
+                        float roca = smoothstep(umbral, umbral + 0.03, r) * enRio * step(0.05, s.cl), aro = smoothstep(umbral - 0.07, umbral, r) * (1 - roca);
+                        er = max(er, aro * 0.9);
+                        espuma = max(espuma, er * enRio * smoothstep(0.0, 0.12, 0.5 * s.cl));
+                        c = lerp(c, float3(0.55, 0.52, 0.47) * (0.6 + 0.45 * l), roca);
+                        alfa = max(alfa, roca);
                     }
                 }
                 if (modo == 1)

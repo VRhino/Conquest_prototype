@@ -101,6 +101,7 @@ namespace ConquestTactics.Mundo.Mapa
         readonly Material materialSombra;
         readonly Mesh cuadro;
         public CaucesDelMapa Cauces;
+        const double MedioPintado = CampoDeRios.MedioPintadoDeCerca;
         readonly TablaDelMosaico tabla;
         readonly int semillaMundo;
         readonly Material materialMosaico;
@@ -569,7 +570,7 @@ namespace ConquestTactics.Mundo.Mapa
                 }
                 return d;
             }
-            double ACauce(double x, double y) => rioCerca ? Cauces.ACauce(x, y) : double.PositiveInfinity;
+            double ACauce(double x, double y) => rioCerca ? Cauces.ACauce(x, y, medioMinimo: MedioPintado) : double.PositiveInfinity;
 
             // El mosaico (si va): la estructura de cada celda de 2 u y la especie que manda en cada rodal de 8 u.
             var (estructura, rodales) = Mosaico ? Resolver(tx, ty, lado, m, claros, info) : (null, null);
@@ -820,7 +821,7 @@ namespace ConquestTactics.Mundo.Mapa
             bool rioCerca = Cauces != null && Cauces.HayRioCerca(tx * lado, ty * lado, (tx + 1) * lado, (ty + 1) * lado);
             int K(double x, double y) => Math.Min(m.N - 1, Math.Max(0, (int)Math.Round((y - m.Y0) / PasoMuestras))) * m.N
                                          + Math.Min(m.N - 1, Math.Max(0, (int)Math.Round((x - m.X0) / PasoMuestras)));
-            bool AguaEn(double x, double y) => m.Agua[K(x, y)] || (rioCerca && Cauces.ACauce(x, y) < 0.2);
+            bool AguaEn(double x, double y) => m.Agua[K(x, y)] || (rioCerca && Cauces.ACauce(x, y, medioMinimo: MedioPintado) < 0.2);
             int n = (int)Math.Round(lado / MosaicoDeVegetacion.Celda);
             var datos = new DatosDeCelda[n * n];
             for (int j = 0; j < n; j++)
@@ -832,7 +833,7 @@ namespace ConquestTactics.Mundo.Mapa
                     float pend = (float)(Math.Sqrt((m.H[c1] - m.H[c]) * (m.H[c1] - m.H[c]) + (m.H[cn] - m.H[c]) * (m.H[cn] - m.H[c])) / (PasoMuestras * e));
                     bool claro = false;
                     foreach (var q in claros) if ((x - q.x) * (x - q.x) + (y - q.y) * (y - q.y) < q.r * q.r) { claro = true; break; }
-                    double ac = rioCerca ? Cauces.ACauce(x, y) : double.PositiveInfinity;
+                    double ac = rioCerca ? Cauces.ACauce(x, y, medioMinimo: MedioPintado) : double.PositiveInfinity;
                     datos[j * n + i] = new DatosDeCelda
                     {
                         X = x, Y = y,
@@ -855,7 +856,7 @@ namespace ConquestTactics.Mundo.Mapa
                 {
                     double x = tx * lado + (i + 0.5) * MosaicoDeVegetacion.CeldaRodal, y = ty * lado + (j + 0.5) * MosaicoDeVegetacion.CeldaRodal;
                     int c = K(x, y);
-                    double dAgua = Math.Min(aAgua[c] * PasoMuestras, rioCerca ? Cauces.ACauce(x, y) : double.PositiveInfinity);
+                    double dAgua = Math.Min(aAgua[c] * PasoMuestras, rioCerca ? Cauces.ACauce(x, y, medioMinimo: MedioPintado) : double.PositiveInfinity);
                     zonas[j * nR + i] = ReglasDeVegetacion.ZonaDe(x, y, m.H[c], dAgua, costa, colina, montana);
                     bordes[j * nR + i] = ReglasDeVegetacion.DominanteDe(x, y, zonas[j * nR + i]);
                 }

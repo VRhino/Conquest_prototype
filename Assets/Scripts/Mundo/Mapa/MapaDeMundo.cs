@@ -32,7 +32,7 @@ namespace ConquestTactics.Mundo.Mapa
         NieblaDelMapa niebla;
         AvesDelMapa aves;
         PolvoDelMapa polvo;
-        GameObject rios, caja;
+        GameObject caja;
         RutasDelMapa rutas;
         Material materialSuelo, materialPropio, cielo;
         Vector2? pulsado;
@@ -107,24 +107,20 @@ namespace ConquestTactics.Mundo.Mapa
             pintor = new CosasEnElMapa((x, y) => terreno.AlturaVisible(x, y), materialSuelo, materialPropio, transform, capaNombres);
             if (artefacto.Navegacion != null && artefacto.Navegacion.Nodos.Count > 0) tiempo = new TiempoDeMarcha(artefacto.Navegacion);
             terreno.Cauces = new CaucesDelMapa(artefacto, relieve);
+            // el río en el suelo y en la lámina de la tesela (26-11): sin cinta de agua aparte
+            terreno.Campo = new CampoDeRios(artefacto, relieve, Umbral("umbralAgua"));
             // La vegetación: donde el suelo pinta sotobosque, con los mismos umbrales (arena, cima, nieve) que el suelo.
             var umbrales = new Vector4(Umbral("umbralCosta"), Umbral("umbralColina"), Umbral("umbralMontana"), Umbral("umbralCima"));
             vegetacion = new VegetacionDelMapa(relieve, Raster(artefacto.Fertilidad), Raster(artefacto.Humedad), Raster(artefacto.DensidadBosque), umbrales,
                 umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w)) { Cauces = terreno.Cauces, NivelDelAgua = Umbral("umbralAgua") };
-            // Los ríos, con la orilla mojada pegada al suelo ya excavado por su cauce.
             var cauces = terreno.Cauces;
-            rios = RiosDelMapa.Construir(artefacto, relieve, (x, y) =>
-            {
-                var h = (float)relieve.AlturaEn(x, y);
-                return cauces.Fondo(x, y, 0.5f) is float f ? Mathf.Min(h, f) : h;
-            }, transform, cauces);
             niebla = new NieblaDelMapa();
             // la vida del mapa (tema 9): solo pájaros y el polvo de lo que anda
             aves = new AvesDelMapa((x, y) => terreno.AlturaVisible(x, y));
-            polvo = new PolvoDelMapa((x, y) => terreno.AlturaVisible(x, y), (x, y) => relieve.AguaEn(x, y) || cauces.ACauce(x, y, 1) < 0.1,
+            polvo = new PolvoDelMapa((x, y) => terreno.AlturaVisible(x, y), (x, y) => relieve.AguaEn(x, y) || cauces.ACauce(x, y, 1, CampoDeRios.MedioPintadoDeCerca) < 0.1,
                 Raster(artefacto.Fertilidad), Raster(artefacto.Humedad), umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w));
             // los nodos de recursos (tema 5): el agua, la del relieve y los cauces (el parche y los cascotes no van encima)
-            nodos = new NodosDelMapa(terreno, artefacto.Nodos, (x, y) => relieve.AguaEn(x, y) || (cauces.ACauce(x, y, 2) < 0.15), terreno.Material);
+            nodos = new NodosDelMapa(terreno, artefacto.Nodos, (x, y) => relieve.AguaEn(x, y) || (cauces.ACauce(x, y, 2, CampoDeRios.MedioPintadoDeCerca) < 0.15), terreno.Material);
             // las maquetas de los asentamientos (tema 6); la capa baja ralea junto a los nodos y junto a las miniaturas
             maquetas = new MaquetasDelMapa(terreno);
             // (los pueblos, sobre su nodo: dónde está y de qué tipo, y el color de su recurso para el mineral de las minas)
@@ -362,12 +358,6 @@ namespace ConquestTactics.Mundo.Mapa
             niebla?.Destruir();
             aves?.Dispose();
             polvo?.Dispose();
-            if (rios != null)
-                foreach (var r in rios.GetComponentsInChildren<MeshRenderer>())
-                {
-                    Destroy(r.GetComponent<MeshFilter>().sharedMesh);
-                    Destroy(r.sharedMaterial);
-                }
             if (materialSuelo != null) Destroy(materialSuelo);
             if (materialPropio != null) Destroy(materialPropio);
             rutas?.Destruir();
@@ -965,8 +955,6 @@ namespace ConquestTactics.Mundo.Mapa
         public float AlturaVisible(double x, double y) => terreno.AlturaVisible(x, y);
         /// <summary>Puntos de la ruta pintada (0 sin ruta).</summary>
         public float? AlturaDeMalla(double x, double y) => terreno.AlturaDeMalla(x, y);
-        /// <summary>Los ríos y vados pintados (una malla).</summary>
-        public Mesh MallaDeRios => rios != null ? rios.GetComponent<MeshFilter>().sharedMesh : null;
         public int PuntosDeRuta => Columna != null ? rutas?.PuntosDe(Columna.Id) ?? 0 : 0;
         /// <summary>Puntos de la ruta pintada de la columna `id` (0 sin ruta) y dónde se planta su marca de destino.</summary>
         public int PuntosDeRutaDe(string id) => rutas?.PuntosDe(id) ?? 0;

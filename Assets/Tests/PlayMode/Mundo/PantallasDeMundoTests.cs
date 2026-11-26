@@ -280,20 +280,29 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Capturar("9a_avisos");
             Pulsar(raiz.Q<Button>("avisos"));
 
-            // Los ríos se ven: cerca del campamento, toda la cinta del río queda por encima del suelo pintado (el cauce está excavado en el relieve
-            // y antes la cinta quedaba enterrada bajo las orillas).
+            // Los ríos se ven: cerca del campamento, en la lámina de la tesela (UV1.y = 1, 26-11), los vértices del cauce quedan por encima del
+            // suelo pintado (el campo de ríos talla el cauce bajo su agua).
             var centroCamp = mapa.Centro.Value;
-            int cerca = 0;
-            foreach (var vertice in mapa.MallaDeRios.vertices)
+            int cerca = 0, encima = 0;
+            foreach (var mf in mapa.GetComponentsInChildren<MeshFilter>().Where(f => f.name == "agua"))
             {
-                var (rx, _, ry) = ConquestTactics.Mundo.Mapa.EscalaDelMapa.AlMapa(vertice);
-                if (CosasDelMapa.Distancia(rx, ry, centroCamp.x, centroCamp.y) > 60) continue;
-                var malla = mapa.AlturaDeMalla(rx, ry);
-                if (malla == null) continue;
-                cerca++;
-                Assert.Greater(vertice.y, malla.Value, $"el río en ({rx:0.0}, {ry:0.0}) queda por encima del suelo");
+                var u1 = new System.Collections.Generic.List<Vector2>();
+                mf.sharedMesh.GetUVs(1, u1);
+                var vs = mf.sharedMesh.vertices;
+                for (int i = 0; i < u1.Count; i++)
+                {
+                    if (u1[i].y < 0.5f) continue;
+                    var w = mf.transform.TransformPoint(vs[i]);
+                    var (rx, _, ry) = ConquestTactics.Mundo.Mapa.EscalaDelMapa.AlMapa(w);
+                    if (CosasDelMapa.Distancia(rx, ry, centroCamp.x, centroCamp.y) > 60) continue;
+                    var malla = mapa.AlturaDeMalla(rx, ry);
+                    if (malla == null) continue;
+                    cerca++;
+                    if (w.y > malla.Value) encima++;
+                }
             }
             Assert.Greater(cerca, 0, "hay río cerca del campamento");
+            Assert.Greater(encima, cerca / 3, $"el agua del río por encima de su cauce ({encima} de {cerca} vértices; los de la orilla quedan bajo el suelo)");
             mapa.Camara.PasoDeZoom(1);
             mapa.Camara.Inclinar(25);
             yield return Quieto(1.5f);

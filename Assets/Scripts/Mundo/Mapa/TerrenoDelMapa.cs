@@ -21,6 +21,14 @@ namespace ConquestTactics.Mundo.Mapa
         bool conFertilidad;
         /// <summary>Los cauces de los ríos: el suelo baja hasta ellos (si no, el agua del río queda enterrada).</summary>
         public CaucesDelMapa Cauces;
+        /// <summary>El campo de los ríos (26-11): talla su cauce en el suelo y pone su agua en la lámina de la tesela, como el mar y los lagos.
+        /// Sin él, el cauce de `Cauces` de antes (y la cinta de agua aparte).</summary>
+        public CampoDeRios Campo;
+        /// <summary>Lo que tarda (u) el agua de un río en bajar a la del mar o el lago en que entra.</summary>
+        const float Boca = 4;
+        /// <summary>Lo más que sube o baja la lámina en una celda con río junto al mar o un lago (m, por 1 + 2 × el paso en u); más, es una
+        /// juntura que no casa y la celda no se pinta.</summary>
+        const float SaltoDeLamina = 2;
         readonly float nivelDelMar;
         readonly Material material, materialAgua;
         readonly Texture2D datos;
@@ -317,7 +325,8 @@ namespace ConquestTactics.Mundo.Mapa
             if (conFertilidad && agua) return Plano(hondo > PinturaDelMapa.MarHondo ? PinturaDelMapa.AguaHonda : PinturaDelMapa.AguaSomera);
             if (conFertilidad && fertilidad != null) return Plano(ColorDeFertilidad(fertilidad.En(x, y) / 255f));
             byte Uno(float v) => (byte)Mathf.RoundToInt(255 * (1 - Mathf.Clamp01(v)));
-            return new Color32(Uno(hondo / EscalaDelMapa.MetrosPorUnidad / PinturaDelMapa.AguaMaxima), Uno(mojado), Uno(ribera), 255);
+            // (la ribera, lineal de −1 a 1 en 0..1: interpolada entre vértices, el sombreado la corta por píxel en una curva, sin dientes)
+            return new Color32(Uno(hondo / EscalaDelMapa.MetrosPorUnidad / PinturaDelMapa.AguaMaxima), Uno(mojado), Uno(0.5f + 0.5f * ribera), 255);
         }
 
         // El proyecto va en espacio lineal: el color de vértice no se convierte solo.
@@ -348,24 +357,52 @@ namespace ConquestTactics.Mundo.Mapa
                     agua[k] = relieve.AguaEn(x, y);
                     hayAgua |= agua[k];
                 }
+            var cauces = Cauces != null && Cauces.HayRioCerca(x0 - M * paso, y0 - M * paso, x0 + lado + M * paso, y0 + lado + M * paso) ? Cauces : null;
+            var campo = Campo != null && Campo.HayRioEn(x0 - M * paso, y0 - M * paso, x0 + lado + M * paso, y0 + lado + M * paso) ? Campo : null;
+            // del río, en cada muestra: el nivel de su agua (NaN fuera), lo mojado, la corriente (rumbo) y lo rápido que baja (aguas blancas, 0..1)
+            // (y el de su orilla, para las esquinas secas de la lámina)
+            float[] nivelRio = null, nivelOrilla = null, mojadoRio = null, rapido = null, centroRio = null, pesoRio = null;
+            Vector2[] ejeRio = null;
+            Vector2[] corriente = null;
+            if (campo != null) { ejeRio = new Vector2[W * W]; pesoRio = new float[W * W]; centroRio = new float[W * W]; nivelRio = new float[W * W]; nivelOrilla = new float[W * W]; mojadoRio = new float[W * W]; rapido = new float[W * W]; corriente = new Vector2[W * W]; }
+            bool hayRio = false;
+            var ribera = new float[W * W];
+            var somero = new float[W * W];
+            // El campo de los ríos, antes que la orilla del mar y los lagos: así, donde un río entra en ellos, su agua no cuenta como tierra (sin
+            // orilla ni espuma atravesadas en la boca).
+            var enRio = campo != null ? new CampoDeRios.EnRio?[W * W] : null;
+            var aguaOrio = agua;
+            if (campo != null)
+            {
+                aguaOrio = (bool[])agua.Clone();
+                for (int j = 0, k = 0; j < W; j++)
+                    for (int i = 0; i < W; i++, k++)
+                    {
+                        if (agua[k]) continue;
+                        double x = x0 + (i - M) * paso, y = y0 + (j - M) * paso;
+                        float ensanche = cauces != null ? cauces.Ensanche(x, y, out somero[k]) : 1;
+                        enRio[k] = campo.En(x, y, crudo[k], CampoDeRios.MedioMinimo * paso, ensanche);
+                        aguaOrio[k] = enRio[k] is CampoDeRios.EnRio en && !float.IsNaN(en.Nivel);
+                        // lo somero del vado, con lo andado continuo del río más cercano (no a saltos de muestra en muestra)
+                        if (cauces != null && enRio[k] is CampoDeRios.EnRio er && er.Rio >= 0) somero[k] = cauces.SomeroDe(er.Rio, er.S);
+                    }
+            }
             // La orilla (BronzeAgeClient, `terreno.ts` y `agua.ts`): la máscara de agua emborronada (`b`, la costa es b = 0,5) y, en el agua, la
             // distancia a tierra. El fondo baja de 0 a 2,6 u en los primeros 6 u desde la orilla; la tierra de junto al agua baja hacia la lámina
             // con 0,8 u de playa, sin quedar a menos de 0,03 u sobre ella. Así la orilla es la línea donde el suelo corta la lámina, sin escalones.
-            float[] mascara = hayAgua ? MascaraSuave(agua, W) : null, distancia = hayAgua ? DistanciaATierra(agua, W) : null;
+            float[] mascara = hayAgua ? MascaraSuave(agua, W) : null, distancia = hayAgua ? DistanciaATierra(aguaOrio, W) : null;
             // En tierra, la distancia al agua más cercana (en muestras) y el nivel de su lámina.
             float[] alAgua = null, nivelAlAgua = null;
             if (hayAgua) (alAgua, nivelAlAgua) = DistanciaAlAgua(agua, crudo, W);
-            var cauces = Cauces != null && Cauces.HayRioCerca(x0 - M * paso, y0 - M * paso, x0 + lado + M * paso, y0 + lado + M * paso) ? Cauces : null;
             var suelo = new float[W * W];
             var nivelCerca = new float[W * W];
-            var ribera = new float[W * W];
-            var somero = new float[W * W];
             for (int j = 0, k = 0; j < W; j++)
                 for (int i = 0; i < W; i++, k++)
                 {
                     double x = x0 + (i - M) * paso, y = y0 + (j - M) * paso;
                     float h = crudo[k];
                     nivelCerca[k] = float.NaN;
+                    if (nivelRio != null) { nivelRio[k] = nivelOrilla[k] = float.NaN; centroRio[k] = -1; pesoRio[k] = 1; }
                     if (hayAgua)
                     {
                         float b = mascara[k];
@@ -388,7 +425,40 @@ namespace ConquestTactics.Mundo.Mapa
                             h = Mathf.Min(h, techo);
                         }
                     }
-                    if (cauces != null && cauces.Consultar(x, y, paso, out ribera[k], out somero[k]) is float fondo) h = Mathf.Min(h, fondo);
+                    if (campo != null)
+                    {
+                        // El cauce del campo (ya consultado), con el medio ancho mínimo de este paso; en el trecho de vado, menos hondo. La ribera,
+                        // más ancha en el lado de dentro de las curvas y en el vado (`Ensanche`, que da también lo somero).
+                        if (enRio[k] is CampoDeRios.EnRio en)
+                        {
+                            // La boca: en los últimos `Boca` u antes del mar o de un lago, el agua del río (con su cauce y su orilla) baja hasta su
+                            // lámina, para que se junten sin escalón ni dientes de orilla.
+                            // Y el río se funde con ellos: su aspecto (`pesoRio`, al sombreado) y lo hondo de su cauce pasan a los suyos en esos `Boca` u.
+                            float cercaDelAgua = hayAgua && !float.IsNaN(nivelAlAgua[k]) ? Mathf.SmoothStep(0, 1, alAgua[k] * paso / Boca) : 1;
+                            pesoRio[k] = cercaDelAgua;
+                            if (hayAgua && !float.IsNaN(nivelAlAgua[k]) && en.NivelOrilla > nivelAlAgua[k])
+                            {
+                                float baja = (1 - cercaDelAgua) * (en.NivelOrilla - nivelAlAgua[k]);
+                                en.Suelo -= baja; en.Nivel -= baja; en.NivelOrilla -= baja;
+                            }
+                            if (!float.IsNaN(en.Nivel)) en.Suelo = en.Nivel - (en.Nivel - en.Suelo) * Mathf.Lerp(0.3f, 1, cercaDelAgua);
+                            h = en.Suelo;
+                            ribera[k] = en.Ribera;
+                            mojadoRio[k] = en.Mojado;
+                            corriente[k] = new Vector2(en.Cx, en.Cy);
+                            centroRio[k] = en.Centro;
+                            ejeRio[k] = new Vector2(en.S, en.Lado);
+                            rapido[k] = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.1f, 0.3f, en.Pendiente / e));
+                            nivelOrilla[k] = en.NivelOrilla;
+                            if (!float.IsNaN(en.Nivel))
+                            {
+                                h = en.Nivel - (en.Nivel - h) * Mathf.Lerp(1, 0.3f, somero[k]);
+                                nivelRio[k] = en.Nivel;
+                                hayRio = true;
+                            }
+                        }
+                    }
+                    else if (cauces != null && cauces.Consultar(x, y, paso, out ribera[k], out somero[k]) is float fondo) h = Mathf.Min(h, fondo);
                     suelo[k] = h;
                 }
             // La pendiente ancha: la del relieve suavizado con una caja de ±`ancho` muestras. Va al sombreado (UV0) para decidir la roca de
@@ -402,6 +472,8 @@ namespace ConquestTactics.Mundo.Mapa
             var anchas = new Vector3[n * n + borde];
             // UV1: x la sombra del relieve (la pone `AplicarRelieve`), y lo somero de los trechos de vado (la playa de grava, en `MapaSuelo`)
             var uv1 = new Vector2[n * n + borde];
+            // UV2: del río más cercano, la distancia a su eje, su medio ancho pintado y el ancho de su ribera (u; 0 lejos de todo río)
+            var uv2 = new Vector4[n * n + borde];
             float dos = 2 * paso * e;
             for (int j = 0, k = 0; j < n; j++)
                 for (int i = 0; i < n; i++, k++)
@@ -412,9 +484,14 @@ namespace ConquestTactics.Mundo.Mapa
                     normales[k] = new Vector3(-(suelo[r + 1] - suelo[r - 1]) / dos, 1, (suelo[r + W] - suelo[r - W]) / dos).normalized;
                     // La arena mojada: la tierra de la orilla (máscara entre 0 y 0,5).
                     float mojado = hayAgua && !agua[r] && !float.IsNaN(nivelAlAgua[r]) ? 1 - Mathf.SmoothStep(0, 1, alAgua[r] * paso / 1.2f) : 0;
-                    colores[k] = ColorEn(x0 + i * paso, y0 + j * paso, agua[r], agua[r] ? Mathf.Max(0, Nivel(crudo[r]) - suelo[r]) : 0, mojado, ribera[r]);
+                    // (en el río: lo hondo bajo su lámina y su suelo mojado, a la medida de su ancho)
+                    bool deRio = !agua[r] && nivelRio != null && !float.IsNaN(nivelRio[r]);
+                    if (mojadoRio != null && !agua[r]) mojado = Mathf.Max(mojado, mojadoRio[r]);
+                    float hondoAqui = agua[r] ? Mathf.Max(0, Nivel(crudo[r]) - suelo[r]) : deRio ? Mathf.Max(0, nivelRio[r] - suelo[r]) : 0;
+                    colores[k] = ColorEn(x0 + i * paso, y0 + j * paso, agua[r] || deRio, hondoAqui, mojado, ribera[r]);
                     anchas[k] = new Vector3(-(suave[r + 1] - suave[r - 1]) / dos, 1, (suave[r + W] - suave[r - W]) / dos).normalized;
                     uv1[k] = new Vector2(0, somero[r]);
+                    if (enRio != null && enRio[r] is CampoDeRios.EnRio er) uv2[k] = new Vector4(Mathf.Abs(er.Lado), er.Medio, er.AnchoRibera, 0);
                 }
             // El contorno, en cuatro lados de n vértices (las esquinas, repetidas).
             var contorno = new int[borde];
@@ -434,6 +511,7 @@ namespace ConquestTactics.Mundo.Mapa
                 colores[f] = colores[v];
                 anchas[f] = anchas[v];
                 uv1[f] = uv1[v];
+                uv2[f] = uv2[v];
             }
             var triangulos = new int[(n - 1) * (n - 1) * 6 + 4 * (n - 1) * 6];
             int t = 0;
@@ -459,6 +537,7 @@ namespace ConquestTactics.Mundo.Mapa
             malla.SetColors(colores);
             malla.SetUVs(0, anchas);
             malla.SetUVs(1, uv1);
+            malla.SetUVs(2, uv2);
             malla.SetTriangles(triangulos, 0);
             malla.RecalculateBounds();
             var go = new GameObject(malla.name);
@@ -468,7 +547,7 @@ namespace ConquestTactics.Mundo.Mapa
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = material;
             mr.shadowCastingMode = ShadowCastingMode.Off;
-            var verticesDelAgua = hayAgua ? Lamina(go.transform, n, M, W, paso, agua, crudo, suelo, nivelCerca) : null;
+            var verticesDelAgua = hayAgua || hayRio ? Lamina(go.transform, n, M, W, paso, agua, crudo, suelo, nivelCerca, hayRio ? new Rio(nivelRio, nivelOrilla, corriente, rapido, somero, centroRio, pesoRio, ejeRio) : null) : null;
             // La sombra del relieve (con sombras reales): se hornea poco a poco, con presupuesto por fotograma (`HornearRelieve`); la tesela sale
             // sin ella y la recibe al acabar.
             if (PinturaDelMapa.SombrasReales && PinturaDelMapa.SombraDelRelieve)
@@ -477,16 +556,33 @@ namespace ConquestTactics.Mundo.Mapa
             return go;
         }
 
+        /// <summary>Lo del río en cada muestra de la ventana, para la lámina: el nivel de su agua (NaN fuera), la corriente, lo rápido y lo somero.</summary>
+        sealed class Rio
+        {
+            public readonly float[] Nivel, Orilla, Rapido, Somero, Centro, Peso;
+            public readonly Vector2[] Corriente, Eje;
+            public Rio(float[] nivel, float[] orilla, Vector2[] corriente, float[] rapido, float[] somero, float[] centro, float[] peso, Vector2[] eje)
+            { Nivel = nivel; Orilla = orilla; Corriente = corriente; Rapido = rapido; Somero = somero; Centro = centro; Peso = peso; Eje = eje; }
+            public bool En(int r) => !float.IsNaN(Nivel[r]);
+        }
+
         /// <summary>La lámina de agua de la tesela (BronzeAgeClient: `laminaDeAgua`): toda celda con alguna esquina de agua. Las esquinas de agua van a
         /// su nivel; las de tierra, al de la muestra de agua más cercana (quedan bajo el suelo, que corta la lámina en la orilla). Cada vértice lleva
-        /// en UV0.x lo hondo que queda el fondo (u), para el color, la transparencia, las olas y la espuma del sombreado.</summary>
+        /// en UV0.x lo hondo que queda el fondo (u), para el color, la transparencia, las olas y la espuma del sombreado.
+        /// Con `rio`, también las celdas con alguna esquina de río (donde ya hay mar o lago, manda ese): sus esquinas, al nivel del río; las de
+        /// tierra, al de la muestra de río más cercana. UV1: x lo somero (el trecho de vado), y 1 en el río (bajando a 0 en la boca, que se funde con el mar o el lago); UV2: el rumbo de la corriente (xy),
+        /// lo rápido que baja (z) y lo cerca del eje (w: `CampoDeRios.EnRio.Centro`); UV3, lo andado a lo largo del río y la
+        /// distancia con signo a su eje (u).</summary>
         // (devuelve, de cada vértice de la lámina, su (i, j) en la tesela, para la sombra del relieve; null si no hay lámina)
-        List<Vector2Int> Lamina(Transform tesela, int n, int M, int W, float paso, bool[] agua, float[] crudo, float[] suelo, float[] nivelCerca)
+        List<Vector2Int> Lamina(Transform tesela, int n, int M, int W, float paso, bool[] agua, float[] crudo, float[] suelo, float[] nivelCerca, Rio rio)
         {
             var e = EscalaDelMapa.MetrosPorUnidad;
             var indice = new int[n * n];
             var vertices = new List<Vector3>();
             var uvs = new List<Vector3>();
+            var uv1 = new List<Vector2>();
+            var uv2 = new List<Vector4>();
+            var uv3 = new List<Vector2>();
             var coordenadas = new List<Vector2Int>();
             var triangulos = new List<int>();
             for (int k = 0; k < indice.Length; k++) indice[k] = -1;
@@ -495,13 +591,25 @@ namespace ConquestTactics.Mundo.Mapa
                 int k = j * n + i;
                 if (indice[k] >= 0) return indice[k];
                 int r = (j + M) * W + i + M;
-                float nivel = agua[r] ? Nivel(crudo[r]) : nivelCerca[r];
+                // (de qué muestra de río toma el nivel: la suya, en el cauce o en su orilla (el mismo campo); si no, la más cercana; -1 si no es de río)
+                // (junto al mar o un lago, una muestra vecina de agua, la esquina seca va a su lámina, como antes)
+                bool junto = agua[r - 1] || agua[r + 1] || agua[r - W] || agua[r + W] || agua[r - W - 1] || agua[r - W + 1] || agua[r + W - 1] || agua[r + W + 1];
+                // (salvo si esa lámina queda más alta que el río: un lago colgado sobre él no se derrama por sus esquinas)
+                int deRio = rio == null || agua[r] ? -1 : rio.En(r) ? r : !float.IsNaN(rio.Orilla[r]) && (!junto || !(rio.Orilla[r] >= nivelCerca[r])) ? r
+                    : junto ? -1 : float.IsNaN(nivelCerca[r]) ? RioCerca(rio, W, i + M, j + M, 2) : -1;
+                float nivel = agua[r] ? Nivel(crudo[r]) : deRio < 0 ? nivelCerca[r] : rio.En(deRio) ? rio.Nivel[deRio] : rio.Orilla[deRio];
                 if (float.IsNaN(nivel)) nivel = NivelCerca(agua, crudo, W, i + M, j + M, 4);
                 if (float.IsNaN(nivel)) nivel = suelo[r];
                 indice[k] = vertices.Count;
                 vertices.Add(new Vector3((float)(i * paso * e), nivel, (float)(-j * paso * e)));
                 // UV0: x lo hondo (u); y, 1 si es un lago (la lámina por encima del mar), que el sombreado pinta más calmado; z, la sombra del relieve.
-                uvs.Add(new Vector3(Mathf.Max(0, nivel - suelo[r]) / e, nivel > nivelDelMar - 0.5f ? 1 : 0, 0));
+                // (de río toda esquina que no toque el mar o un lago: si no, el borde del río se pintaría como orilla de mar, con su espuma)
+                bool esRio = rio != null && !agua[r] && (deRio >= 0 || !junto);
+                int q = deRio >= 0 ? deRio : r;
+                uvs.Add(new Vector3(Mathf.Max(0, nivel - suelo[r]) / e, !esRio && nivel > nivelDelMar - 0.5f ? 1 : 0, 0));
+                uv1.Add(esRio ? new Vector2(rio.Somero[q], rio.Peso[q]) : Vector2.zero);
+                uv2.Add(esRio ? new Vector4(rio.Corriente[q].x, rio.Corriente[q].y, rio.Rapido[q], rio.Centro[r]) : Vector4.zero);
+                uv3.Add(esRio ? (rio.Eje[r] != Vector2.zero ? rio.Eje[r] : rio.Eje[q]) : Vector2.zero);
                 coordenadas.Add(new Vector2Int(i, j));
                 return indice[k];
             }
@@ -509,8 +617,13 @@ namespace ConquestTactics.Mundo.Mapa
                 for (int i = 0; i < n - 1; i++)
                 {
                     int r = (j + M) * W + i + M;
-                    if (!(agua[r] || agua[r + 1] || agua[r + W] || agua[r + W + 1])) continue;
+                    if (!(agua[r] || agua[r + 1] || agua[r + W] || agua[r + W + 1]) && !(rio != null && (rio.En(r) || rio.En(r + 1) || rio.En(r + W) || rio.En(r + W + 1)))) continue;
                     int a = Vertice(i, j), b = Vertice(i + 1, j), c = Vertice(i, j + 1), d = Vertice(i + 1, j + 1);
+                    // (con ríos: una celda entre el mar o un lago y tierra cuyas esquinas van a láminas de alturas muy distintas, un lago colgado
+                    // sobre el río, sería una cuña de agua; el suelo tapa ese salto. Los rápidos de un río, sí se pintan)
+                    bool mezcla = (agua[r] || agua[r + 1] || agua[r + W] || agua[r + W + 1]) && !(agua[r] && agua[r + 1] && agua[r + W] && agua[r + W + 1]);
+                    if (rio != null && mezcla && Mathf.Max(Mathf.Max(vertices[a].y, vertices[b].y), Mathf.Max(vertices[c].y, vertices[d].y))
+                                     - Mathf.Min(Mathf.Min(vertices[a].y, vertices[b].y), Mathf.Min(vertices[c].y, vertices[d].y)) > SaltoDeLamina * (1 + 2 * paso)) continue;
                     triangulos.Add(a); triangulos.Add(b); triangulos.Add(c);
                     triangulos.Add(b); triangulos.Add(d); triangulos.Add(c);
                 }
@@ -521,6 +634,7 @@ namespace ConquestTactics.Mundo.Mapa
             for (int k = 0; k < arriba.Length; k++) arriba[k] = Vector3.up;
             malla.SetNormals(arriba);
             malla.SetUVs(0, uvs);
+            if (rio != null) { malla.SetUVs(1, uv1); malla.SetUVs(2, uv2); malla.SetUVs(3, uv3); }
             malla.SetTriangles(triangulos, 0);
             malla.RecalculateBounds();
             var go = new GameObject("agua");
@@ -530,6 +644,20 @@ namespace ConquestTactics.Mundo.Mapa
             mr.sharedMaterial = materialAgua;
             mr.shadowCastingMode = ShadowCastingMode.Off;
             return coordenadas;
+        }
+
+        /// <summary>La muestra de río más cercana a (i, j) a menos de `radio` muestras (por anillos); -1 si no hay.</summary>
+        static int RioCerca(Rio rio, int W, int i, int j, int radio)
+        {
+            for (int r = 1; r <= radio; r++)
+                for (int dj = -r; dj <= r; dj++)
+                    for (int di = -r; di <= r; di++)
+                    {
+                        if (Mathf.Max(Mathf.Abs(di), Mathf.Abs(dj)) != r) continue;
+                        int a = i + di, c = j + dj;
+                        if (a >= 0 && c >= 0 && a < W && c < W && rio.En(c * W + a)) return c * W + a;
+                    }
+            return -1;
         }
 
         /// <summary>El nivel de la lámina de la muestra de agua más cercana a (i, j) a menos de `radio` muestras (por anillos); NaN si no hay.</summary>

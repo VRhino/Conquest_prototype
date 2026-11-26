@@ -679,8 +679,26 @@ namespace ConquestTactics.Mundo.Mapa
                     if (rio.Puntos.Count < 2 || !rio.Puntos.Any(q => q.X / 1000.0 >= ox - 10 && q.X / 1000.0 <= x1 + 10 && q.Y / 1000.0 >= oy - 10 && q.Y / 1000.0 <= y1 + 10)) continue;
                     var ancho = Math.Max(rio.Navegable ? 5 : 2.5f, (rio.Navegable ? 3 : 1.5f) * e);
                     var puntos = rio.Puntos.Select(q => ALienzo(q.X / 1000.0, q.Y / 1000.0)).ToList();
-                    if (cerca) Linea(p2, puntos, new Color(92 / 255f, 84 / 255f, 52 / 255f, 0.55f), ancho + Math.Max(2, 0.6f * e));
-                    Linea(p2, puntos, new Color(38 / 255f, 90 / 255f, 145 / 255f, 0.9f), ancho);
+                    if (rio.Anchos.Count == rio.Puntos.Count)
+                    {
+                        // con el ancho del motor en cada punto (contrato 0.32), como poco el trazo mínimo de siempre: en trozos del mismo grosor
+                        // (redondeado a medio píxel), para no hacer un trazo por tramo
+                        float Px(int i) => Mathf.Round(2 * Math.Max(rio.Navegable ? 5 : 2.5f, (rio.Anchos[i] + rio.Anchos[i + 1]) / 2000f * e)) / 2;
+                        var trozos = new List<(List<Vector2> p, float px)>();
+                        for (int i = 0; i + 1 < puntos.Count; i++)
+                        {
+                            if (trozos.Count == 0 || trozos[trozos.Count - 1].px != Px(i)) trozos.Add((new List<Vector2> { puntos[i] }, Px(i)));
+                            trozos[trozos.Count - 1].p.Add(puntos[i + 1]);
+                        }
+                        if (cerca) foreach (var (p, px) in trozos) Linea(p2, p, new Color(92 / 255f, 84 / 255f, 52 / 255f, 0.55f), px + Math.Max(2, 0.6f * e));
+                        foreach (var (p, px) in trozos) Linea(p2, p, new Color(38 / 255f, 90 / 255f, 145 / 255f, 0.9f), px);
+                        ancho = Math.Max(ancho, rio.Anchos.Max() / 1000f * e);
+                    }
+                    else
+                    {
+                        if (cerca) Linea(p2, puntos, new Color(92 / 255f, 84 / 255f, 52 / 255f, 0.55f), ancho + Math.Max(2, 0.6f * e));
+                        Linea(p2, puntos, new Color(38 / 255f, 90 / 255f, 145 / 255f, 0.9f), ancho);
+                    }
                     for (int i = 0; i < rio.Vados.Count; i++)
                     {
                         var v = rio.Vados[i];

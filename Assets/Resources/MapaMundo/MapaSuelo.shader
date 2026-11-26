@@ -82,10 +82,10 @@ Shader "Conquest/MapaSuelo"
                 float _Mezcla;
             CBUFFER_END
 
-            struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float4 color : COLOR; float3 ancha : TEXCOORD0; float2 relieve : TEXCOORD1; };
+            struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float4 color : COLOR; float3 ancha : TEXCOORD0; float2 relieve : TEXCOORD1; float4 rio : TEXCOORD2; };
             // `ancha`: la normal del relieve suavizado a unos 24 m (la calcula TerrenoDelMapa); decide la roca de pendiente y la nieve.
             // `relieve`: x la sombra del relieve, y lo somero de los trechos de vado (`CaucesDelMapa`: la playa de grava y el lecho de guijarros).
-            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float4 color : COLOR; float3 ancha : TEXCOORD2; float2 relieve : TEXCOORD3; };
+            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float4 color : COLOR; float3 ancha : TEXCOORD2; float2 relieve : TEXCOORD3; float4 rio : TEXCOORD4; };
 
             Salida Vert(Entrada e)
             {
@@ -94,6 +94,7 @@ Shader "Conquest/MapaSuelo"
                 s.pos = TransformWorldToHClip(s.mundo);
                 s.normal = TransformObjectToWorldNormal(e.normal);
                 s.color = e.color;
+                s.rio = e.rio;
                 s.ancha = TransformObjectToWorldNormal(e.ancha);
                 s.relieve = e.relieve;
                 return s;
@@ -216,7 +217,12 @@ Shader "Conquest/MapaSuelo"
                     float fondoGrava = fondo * smoothstep(0.66, 0.8, r3.y * 0.45 + r2.y * 0.55) * (1 - smoothstep(0.3, 1.2, hondo)) * 0.7;
                     // La arena mojada junto al agua (verde del color de vértice) y la ribera de los ríos (azul): arena y guijarros, a manchas.
                     float mojado = 1 - s.color.g;
-                    float riberaRio = 1 - s.color.b;
+                    float riberaRio = max(0, (1 - s.color.b) * 2 - 1); // (lineal, de −1 lejos a 1 en el cauce, `TerrenoDelMapa.ColorEn`; cortada en 0 tras interpolar)
+                    // Junto a un río del campo (UV2: distancia a su eje, medio ancho pintado y ancho de la ribera, en u), por píxel con esa distancia y
+                    // un ruido suave del mundo: el borde de la arena es una curva orgánica, no los triángulos de la malla. (Con lo andado, que salta de
+                    // un río a otro entre vértices vecinos, el ruido se barría dentro del triángulo y salían rayas y puntos.)
+                    if (s.rio.z > 0.001)
+                        riberaRio = max(0, 1 - (s.rio.x - s.rio.y) / (0.95 * s.rio.z) + (RuidoNube(float2(s.mundo.x, -s.mundo.z) / max(_Bruma.w, 1) * 0.45 + 3.7) - 0.5) * 0.5);
                     // El ancho de la ribera varía con ruido a dos escalas (que no sea una banda paralela al río).
                     float ribera = smoothstep(0.25, 0.6, riberaRio + (r3.z - 0.5) * 0.55 + (r2.x - 0.5) * 0.45) * (1 - fondo);
                     float riberaGrava = ribera * smoothstep(0.66, 0.8, r3.x * 0.5 + r2.z * 0.5) * 0.7;
@@ -292,7 +298,8 @@ Shader "Conquest/MapaSuelo"
                     float2 pu = float2(p.x, -p.z) / max(_Bruma.w, 1);
                     float k1 = RuidoNube(pu * 1.7 + float2(t * 0.11, t * 0.05)), k2 = RuidoNube(pu * 2.2 + 5.1 - float2(t * 0.07, -t * 0.09));
                     float caustica = pow(saturate(1 - abs(k1 - k2) * 5), 5) * smoothstep(0.02, 0.15, hondo) * (1 - smoothstep(0.7, 1.8, hondo));
-                    c += caustica * 0.22 * float3(0.85, 1.0, 0.95) * (1 - smoothstep(20.0, 70.0, distancia / max(_Bruma.w, 1)));
+                    // (en el cauce de un río, la ribera vale 1: allí, pocas, que su agua se lea azul y no lechosa)
+                    c += caustica * 0.22 * lerp(1, 0.3, saturate(riberaRio) * step(0.02, hondo)) * float3(0.85, 1.0, 0.95) * (1 - smoothstep(20.0, 70.0, distancia / max(_Bruma.w, 1)));
                     // La arena mojada y la ribera: más oscuras y algo más frías.
                     c *= lerp(float3(1, 1, 1), float3(0.7, 0.72, 0.74), saturate(max(mojado, smoothstep(0.7, 0.95, riberaRio) * 0.7)) * (1 - fondo));
                     pesoNieve = w[NIEVE] / suma;

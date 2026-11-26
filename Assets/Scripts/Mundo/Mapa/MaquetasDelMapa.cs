@@ -1385,7 +1385,7 @@ namespace ConquestTactics.Mundo.Mapa
                 bool Vedado(double lx, double ly)
                 {
                     var (x, y) = AlMapa(lx, ly);
-                    if (terreno.AguaEn(x, y) || (terreno.Cauces != null && terreno.Cauces.ACauce(x, y, 0.5) < 0.15)) return true;
+                    if (terreno.AguaEn(x, y) || (terreno.Cauces != null && terreno.Cauces.ACauce(x, y, 0.5, CampoDeRios.MedioPintadoDeCerca) < 0.15)) return true;
                     // (la pendiente fuerte: más de un 35 % en 0,2 u)
                     double e = EscalaDelMapa.MetrosPorUnidad * 0.2;
                     if (Math.Abs(terreno.AlturaPintada(x + 0.1, y) - terreno.AlturaPintada(x - 0.1, y)) > 0.35 * e ||

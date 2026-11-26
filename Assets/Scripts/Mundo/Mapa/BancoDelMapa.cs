@@ -42,19 +42,23 @@ namespace ConquestTactics.Mundo.Mapa
         public string Hash { get; private set; } = "";
         public string OrigenDelMundo { get; private set; } = "";
 
-        /// <summary>El mundo en disco, por este orden: la caché del cliente (`persistentDataPath/mundo`, el que bajó la última partida) y, si
-        /// no está, el que sale del generador del motor (`BronzeAgeFase0/generador/salida/mundo`, hermana de Conquest; con los datos de juego de
-        /// la caché). Solo lectura. Si no hay ninguno, falla.</summary>
+        /// <summary>El mundo en disco: el que sale del generador del motor (`BronzeAgeFase0/generador/salida/mundo`, hermana de Conquest), que es el
+        /// más nuevo (para ver un mundo antes de que llegue a la partida; 26-11) y, si no lo hay, la caché del cliente (`persistentDataPath/mundo`,
+        /// el que bajó la última partida; su fecha no vale para elegir, porque se reescribe al entrar). Los datos de juego, siempre de la caché.
+        /// `MUNDO_BANCO=cache` fuerza la caché. Solo lectura: la caché no se toca. El panel de la mesa y de la previa dice el hash y el origen. Si
+        /// no hay ninguno, falla.</summary>
         public static BancoDelMapa DelDisco(string prefijo)
         {
             var carpeta = Path.Combine(Application.persistentDataPath, "mundo");
             string fArtefacto = Primero(Path.Combine(carpeta, "artefacto")), fRelieve = Primero(Path.Combine(carpeta, "relieve"));
             string fDatos = Primero(Path.Combine(carpeta, "datos")), origen = "la caché del cliente";
-            if (fArtefacto == null)
+            var generador = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "BronzeAgeFase0", "generador", "salida", "mundo"));
+            string gArtefacto = Primero(generador, "mundo-*.bin"), gRelieve = Primero(generador, "relieve-*.bin"), forzado = Environment.GetEnvironmentVariable("MUNDO_BANCO");
+            bool delGenerador = gArtefacto != null && (forzado != "cache" || fArtefacto == null);
+            if (delGenerador)
             {
-                var generador = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "BronzeAgeFase0", "generador", "salida", "mundo"));
-                fArtefacto = Primero(generador, "mundo-*.bin");
-                fRelieve = Primero(generador, "relieve-*.bin");
+                fArtefacto = gArtefacto;
+                fRelieve = gRelieve;
                 origen = "el generador del motor";
             }
             if (fArtefacto == null || fDatos == null)

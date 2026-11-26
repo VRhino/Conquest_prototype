@@ -150,6 +150,17 @@ namespace ConquestTactics.Mundo.Mapa
                         if (e2 <= dx) { err += dx; y0 += sy; }
                     }
                 }
+            // los anchos, con el del motor (`Rio.anchos`): donde el río es más ancho que una celda, las celdas que cubre alrededor de cada punto
+            foreach (var r in artefacto.Rios)
+                for (int k = 0; k < Math.Min(r.Puntos.Count, r.Anchos.Count); k++)
+                {
+                    double medio = r.Anchos[k] / 2000.0, px0 = r.Puntos[k].X / 1000.0, py0 = r.Puntos[k].Y / 1000.0;
+                    if (medio < celda / 2) continue;
+                    for (int cy = (int)Math.Floor((py0 - medio) / celda); cy <= (int)Math.Floor((py0 + medio) / celda); cy++)
+                        for (int cx = (int)Math.Floor((px0 - medio) / celda); cx <= (int)Math.Floor((px0 + medio) / celda); cx++)
+                            if (cx >= 0 && cy >= 0 && cx < cols && cy < filas && Math.Pow((cx + 0.5) * celda - px0, 2) + Math.Pow((cy + 0.5) * celda - py0, 2) <= medio * medio)
+                                px[(filas - 1 - cy) * cols + cx] = rio;
+                }
             lejos = new Texture2D(cols, filas, TextureFormat.RGBA32, false) { name = "suelo de lejos", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Point };
             lejos.SetPixels32(px);
             lejos.Apply(false);

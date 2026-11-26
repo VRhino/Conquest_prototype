@@ -3001,7 +3001,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>El agua (`Conquest/MapaAgua`): la costa (el mismo sitio que la del suelo), el mar hondo, un lago, un río navegable y otro no,
         /// un vado, una desembocadura, el borde de la niebla sobre el agua y el horizonte sobre el mar. Comprueba que el agua es una lámina aparte,
-        /// que el mar hondo es agua y sale más oscuro que el lago (somero en la orilla).</summary>
+        /// que el mar hondo es agua y sale más oscuro que el lago (somero en la orilla) y que los ríos van en esa lámina (26-11).</summary>
         [Category("Mapa")]
         [UnityTest, Timeout(600_000)]
         [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
@@ -3057,6 +3057,24 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Llegar(mapa, almacen, donde);
                 yield return Vista(mapa, ZoomDelMapa.Normal, 35, $"agua_{k}_2_media");
                 colores[k] = Centro();
+                if (k.StartsWith("rio") || k == "aguas_blancas" || k == "vado")
+                {
+                    // el río va en la lámina de la tesela (26-11): vértices de río (UV1.y = 1) a menos de 2 u del sitio
+                    int deRio = 0;
+                    foreach (var mf in go.GetComponentsInChildren<MeshFilter>().Where(f => f.name == "agua"))
+                    {
+                        var u1 = new List<Vector2>();
+                        mf.sharedMesh.GetUVs(1, u1);
+                        var vs = mf.sharedMesh.vertices;
+                        for (int i = 0; i < u1.Count; i++)
+                        {
+                            var w = mf.transform.TransformPoint(vs[i]);
+                            double ux = w.x / EscalaDelMapa.MetrosPorUnidad, uy = -w.z / EscalaDelMapa.MetrosPorUnidad;
+                            if (u1[i].y > 0.5f && (ux - agua[k].x) * (ux - agua[k].x) + (uy - agua[k].y) * (uy - agua[k].y) < 4) deRio++;
+                        }
+                    }
+                    Assert.Greater(deRio, 0, $"{k}: el río, en la lámina");
+                }
                 if (k == "rio_navegable")
                     for (int f = 1; f < 4; f++) yield return Fotograma($"agua_tira_rio_{f}", 0.4f);
                 yield return Vista(mapa, ZoomDelMapa.Cerca, 15, $"agua_{k}_1_cerca");
