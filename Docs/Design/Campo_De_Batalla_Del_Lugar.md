@@ -83,7 +83,7 @@ Lo que el mundo tiene en el sitio de la batalla es lo que el campo tiene que rep
 
 Cambios en el motor:
 
-0. **`ContextoCaravana` gana `solitarios`**, como el de `ContextoCampoAbierto` (autor, 2026-11-23): verdadero si ninguno de los bandos es un ejército (una caravana suelta o de un héroe contra una columna). Decide el tamaño de la batalla (§6.1).
+0. ~~`ContextoCaravana` gana `solitarios`~~: ya no hace falta (autor, 2026-11-26). El tamaño lo saca Conquest de lo que trae cada bando del ticket (§6.1).
 1. `BattleMapReference` gana un `RecorteDelLugar`, de `lado_recorte` (el lado del mundo del área jugable más el anillo de 700 m: unas 27 u en la pequeña y 32 u en la grande, §6.1) centrado en `centro`:
    - `alturas`: las muestras del relieve, cada 0,5 u, en el u16 del paquete de relieve tal cual (0 a 65 535 = 0 a 1000 m del mundo, sin el zoom: el motor solo copia; autor, 2026-11-26) (unas 54×54 en la pequeña y 65×65 en la grande; con lo demás, unos 7,4 y 11 KB en protobuf, §10), con su agua por muestra: tierra, lago o mar. El bit de agua solo no basta: los tipos costa y orilla de lago (§5) necesitan distinguir el mar del lago (mesa, 2026-11-23).
    - `punto`: el `Batalla.punto`, la posición del defensor. Cuando el recorte se desplaza hacia la tierra (punto 2), el `centro` ya no es el punto, y sin él se pierde dónde estaba el defensor (mesa, 2026-11-23).
@@ -291,14 +291,14 @@ Luego los **sotos** (la mesa aún avisa con `max_arboles`, que en Conquest ya no
 
 ### 6.1 Tamaño y escala interna contra externa
 
-- **Dos tamaños de batalla, por la entidad más grande que lucha** (autor, 2026-11-23):
+- **Dos tamaños de batalla, por lo que trae cada bando** (autor, 2026-11-26; antes, el 2026-11-23, por si luchaba un ejército, un dato que el ticket no trae):
 
   | Tamaño | Batallas | Área jugable | Entre bandos | Mundo que se lee | Recorte |
   |---|---|---|---|---|---|
-  | Pequeña | Persecución (columna contra columna); caravana pequeña (caravana suelta o de un héroe contra una columna) | `lado_pequena`, 600 m | 550 m (`distancia_pequena`, 275 m cada uno) | 8 u | unas 27 u |
-  | Grande | Campal (ejército contra ejército); caravana grande (ejército escoltando una caravana contra lo que sea, o caravana suelta contra un ejército) | `lado_grande`, 1000 m | 900 m (`distancia_grande`, 450 m cada uno; autor, 2026-11-25, antes 1500 m y 650) | unas 13 u | 32 u |
+  | Pequeña | Ningún bando con más de `heroes_grande` − 1 héroes (5 o menos en cada uno), y ningún bando sin héroes con una caravana de `carros_grande` carros o más | `lado_pequena`, 600 m | 550 m (`distancia_pequena`, 275 m cada uno) | 8 u | unas 27 u |
+  | Grande | Algún bando con `heroes_grande` héroes o más (6), o un bando sin héroes con una caravana de `carros_grande` carros o más (5) | `lado_grande`, 1000 m | 900 m (`distancia_grande`, 450 m cada uno; autor, 2026-11-25, antes 1500 m y 650) | unas 13 u | 32 u |
 
-  El tamaño sale del contexto del ticket: en campo abierto, de `solitarios`, que ya existe («persecución entre columnas personales; si no, campal entre ejércitos»); en caravana, de una marca igual que el motor tiene que añadir (§3).
+  El tamaño sale de los bandos del ticket (`BattleSide`): los héroes son sus `participantes`, y los carros, los de las caravanas del `ContextoCaravana`, que van con el bando que las defiende. Cuentan los del ticket al abrir: las incorporaciones posteriores no cambian el campo, que ya está generado. Fuera de un asedio la capacidad es de 5 héroes por bando (`BATALLA.capacidad.resto`), pero al abrir no se recorta: una columna con más héroes los lleva todos al ticket, y esa batalla es grande.
 - Alrededor del área jugable, un anillo de `anillo_fondo` (700 m; autor, 2026-11-25, antes 200) de terreno no jugable para el horizonte. La niebla de la escena cae sobre él, por la distancia al centro del campo y no a la cámara: empieza a un cuarto del anillo y lo tapa entero en su borde, así nunca se ve dónde se corta el mapa (mesa, 2026-11-25).
 - **La escala interna no es la del mundo.** A 1:1 (1 u = 12 m) los 600 m serían 50 u, unas 12 celdas: más que toda la zona de una plaza de nivel 1 completa (techo de 10 u de radio, 20 u de lado a lado; `ZONA_INFLUENCIA.radioMaximoPorNivel`, `crates/nucleo/src/estado.rs:449`), e incluso más que la de nivel 5 (60 u). El autor lo descarta: una batalla abarca menos que una provincia.
 - **Escala interna (`escala_campo`): 75 m por u, la misma en las dos** (autor, 2026-11-23: se mantiene el zoom y la grande lee más mundo). Una loma mide lo mismo en una persecución que en una campal. Lo que se lee del mundo sale del lado: 600 m son 8 u (dos celdas, menos de la mitad de una provincia de nivel 1) y 1000 m, unas 13 u.
@@ -597,6 +597,7 @@ Del 2026-11-26:
 31. **Árboles:** todos se dibujan; el tope es solo de colliders, y el interior del bosque cerrado es un bloque no transitable. Se afina sobre lo construido (§6.6).
 32. **El campo se genera durante la preparación:** arranca con el ticket, en segundo plano, y tiene que acabar antes de que termine BattlePrep (al menos 30 s); objetivo, unos 10 s (§10).
 33. **Distancias de salida:** se quedan como están (550 m y 900 m entre bandos). Con `baseSpeed` de 5 m/s, los bandos se encuentran en unos 55 s la pequeña y unos 90 s la grande andando, frente a los 15 minutos de batalla (`duracionMinutos.resto`); se revisa jugando.
+34. **El tamaño sale de lo que trae cada bando** (2026-11-26): grande si algún bando trae 6 héroes o más, o si un bando sin héroes defiende una caravana de 5 carros o más; si no, pequeña. Ya no hace falta `solitarios` en el ticket (§6.1).
 
 ### 11.2 Huecos por atender
 
@@ -661,6 +662,7 @@ Lo que el prototipo aún no hace: la forma propia de los tipos paso y colinas (v
 
 | Parámetro | Valor | Qué es |
 |---|---|---|
+| `heroes_grande` / `carros_grande` | 6 / 5 | Desde cuántos héroes en un bando, o carros en la caravana de un bando sin héroes, la batalla es grande (§6.1) |
 | `escala_campo` | 75 m/u | El zoom: metros del campo por u del mundo (el mapa de mundo va a 12 m/u). La altura escala igual |
 | `lado_pequena` / `lado_grande` | 600 m / 1000 m | Lado del área jugable de la batalla pequeña y de la grande; lo que se lee del mundo es el lado entre `escala_campo` (8 u / unas 13 u) |
 | `distancia_pequena` / `distancia_grande` | 275 m / 450 m | Distancia de cada spawn al centro, la misma para los dos bandos (550 m / 900 m entre ellos) |
