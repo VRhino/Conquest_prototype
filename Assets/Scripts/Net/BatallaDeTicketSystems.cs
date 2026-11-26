@@ -121,6 +121,8 @@ namespace ConquestTactics.Net
                     h.Formaciones = antes.Formaciones;
                     h.Listo = antes.Listo;
                 }
+            // El campo del lugar, en segundo plano mientras los jugadores preparan (Campo_De_Batalla_Del_Lugar.md §10).
+            ConquestTactics.Mundo.Campo.CampoDeLaBatalla.Empezar(ticket.BattleId, ticket, null, Debug.Log);
             _esperandoRevision = -1d;
             _creada = -1;
             Debug.Log($"[Red] Ticket {ticket.BattleId} (revisión {ticket.TicketRevision}): {BatallaDeTicket.Actual.Heroes.Count} héroes, " +

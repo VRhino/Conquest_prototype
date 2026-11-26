@@ -71,6 +71,8 @@ namespace ConquestTactics.Mundo.UI
             }
             if (b.Id != batallaVista) EmpezarPreparacion(b);
             batallaVista = b.Id;
+            // El campo del lugar se genera en segundo plano mientras dura la preparación (Campo_De_Batalla_Del_Lugar.md §10).
+            ConquestTactics.Mundo.Campo.CampoDeLaBatalla.Empezar(b.Id, b.Ticket, b.Punto, Debug.Log);
             var token = b.AsignacionPropia != null && !string.IsNullOrEmpty(b.AsignacionPropia.Token);
             if (entrando && PreparacionRed.Empezada) { AlEmpezar(); return; }
             if (entrando && !Activa(b)) SalirSinBatalla();
