@@ -307,6 +307,8 @@ public class MontajeDelCampo : MonoBehaviour
 
     void Update()
     {
+        // (el servidor de batalla va sin gráficos: nada que dibujar)
+        if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) return;
         foreach (var (malla, mats, matrices) in arboles)
             for (int s = 0; s < mats.Length; s++)
             {
