@@ -120,7 +120,7 @@ namespace ConquestTactics.Mundo.UI
             cabeza.Add(tituloConIcono);
             filete.Add(cabeza);
             // La tienda de la Armería y sus fichas viven en Plaza.uss.
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) velo.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja) velo.styleSheets.Add(hoja);
             var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             cuerpo.style.flexShrink = 1;
             filete.Add(cuerpo);

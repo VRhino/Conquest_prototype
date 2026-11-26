@@ -799,7 +799,7 @@ namespace ConquestTactics.Mundo.UI
             var h = HeroeDelCampamento();
             var a = ArbolDelBalance();
             // La ventana del árbol cuelga encima de todo, fuera del HUD de la plaza: se lleva sus estilos (el interruptor y sus colores).
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
             v.AddToClassList("plaza");
             var error = Dialogo.Texto("", "error oculto");
             error.name = "error";

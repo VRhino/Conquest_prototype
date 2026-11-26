@@ -107,7 +107,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var a = c.Sesion.Almacen;
             // Sus piezas (los chips, las filas de la región) son las de la plaza: también en el campamento y a su puerta.
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !cuerpo.styleSheets.Contains(hoja)) cuerpo.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja && !cuerpo.styleSheets.Contains(hoja)) cuerpo.styleSheets.Add(hoja);
             var cols = Dialogo.Caja("intel-cols");
             var izq = Dialogo.Caja("intel-col");
             var der = Dialogo.Caja("intel-col intel-col--der");

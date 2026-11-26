@@ -220,7 +220,7 @@ namespace ConquestTactics.Mundo.UI
             ficha.name = "ficha-armeria";
             ficha.pickingMode = PickingMode.Position;
             ficha.AddToClassList("arm-detalle");
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) ficha.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja) ficha.styleSheets.Add(hoja);
             var cerrar = Dialogo.Boton("✕", "arm-cerrar", () => { elegidaTienda = null; casillaArmeria = -1; CerrarFichaDeTienda(); });
             cerrar.name = "ficha-cerrar";
             ficha.Add(pie);

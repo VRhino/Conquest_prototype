@@ -441,7 +441,7 @@ namespace ConquestTactics.Mundo.UI
         /// Taberna de esa plaza.</summary>
         void TablonDeMercenarios(VisualElement v, IList<OfertaMercenario> tablon, Heroe h, List<FuenteMerc> fuentes, Asentamiento plaza, Action<string> error, Action repintar)
         {
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
             var fuente = fuentes.FirstOrDefault(f => f.PagarCon == pagarConMerc);
             if (fuente.PagarCon == null && fuentes.Count > 0) fuente = fuentes[0];
             var hay = fuente.PagarCon != null;
@@ -695,7 +695,7 @@ namespace ConquestTactics.Mundo.UI
 
         void PestanaMercenarios(VisualElement v, Heroe h, Faccion f)
         {
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
             var a = c.Sesion.Almacen;
             ContratosPorValorar.Ver(f.Contratos);
             var yo = MisPuestos(h);

@@ -18,7 +18,7 @@ namespace ConquestTactics.Mundo.UI
             velo.name = "ventana-opciones";
             velo.focusable = true;
             // El interruptor es el de la plaza: se trae su hoja.
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) velo.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja) velo.styleSheets.Add(hoja);
             var placa = Dialogo.Caja("placa opciones-ventana");
             var filete = Dialogo.Caja("placa-filete");
             placa.Add(filete);

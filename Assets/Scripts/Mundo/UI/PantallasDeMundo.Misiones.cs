@@ -265,7 +265,7 @@ namespace ConquestTactics.Mundo.UI
             Ver(montada.Q("menu-barra"), false);
             var velo = Dialogo.Caja("diario-velo");
             velo.name = "misiones-ventana";
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) velo.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja) velo.styleSheets.Add(hoja);
             velo.RegisterCallback<PointerDownEvent>(e => { if (e.target == velo) CerrarMisiones(); });
             misionesVentana = velo;
             montada.Add(velo);
@@ -501,7 +501,7 @@ namespace ConquestTactics.Mundo.UI
             el?.RemoveFromHierarchy();
             el = Dialogo.Caja("rastreador" + (sitio == montada ? " rastreador--flota" : ""));
             el.name = "rastreador";
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) el.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja) el.styleSheets.Add(hoja);
             var cab = new Button(() => { if (s == null) return; s.Plegado = !s.Plegado; GuardarSeguimiento(); proximoRastreador = 0; }) { name = "rastreador-plegar" };
             cab.AddToClassList("rastreador-cab");
             cab.Add(Dialogo.Texto($"Misiones {seguidas.Count}/{MaxSeguidas}", "rastreador-cab-texto"));
@@ -521,6 +521,14 @@ namespace ConquestTactics.Mundo.UI
             sitio.Insert(0, el);
         }
 
+        /// <summary>La hoja de las misiones, la plaza y sus ventanas (Plaza.uss). No vale `Resources.Load<StyleSheet>("MundoUI/Plaza")`: Plaza.uxml
+        /// se llama igual y trae su propia hoja de estilos en línea («inlineStyle»), y según el orden en que Unity tenga los recursos esa carga da
+        /// la del uxml, vacía de nuestras reglas (así salía el rastreador del mapa: gris, a todo el ancho y sin forma; 26-11). Se toma la que
+        /// enlaza el uxml y, si no la hubiera, la de antes.</summary>
+        static StyleSheet hojaDePlaza;
+        internal static StyleSheet HojaDePlaza => hojaDePlaza != null ? hojaDePlaza
+            : hojaDePlaza = Resources.Load<VisualTreeAsset>("MundoUI/Plaza")?.stylesheets.FirstOrDefault(h => h != null && h.name == "Plaza") ?? Resources.Load<StyleSheet>("MundoUI/Plaza");
+
         /// <summary>La insignia del botón Misiones, aunque no haya rastreador.</summary>
         void PintarInsigniaDeMisiones()
         {
@@ -534,7 +542,7 @@ namespace ConquestTactics.Mundo.UI
         /// hechas; cada una con su sello, sus objetivos, su recompensa, «Seguir» y «Reclamar».</summary>
         void PestanaMisionesDeFaccion(VisualElement v, Heroe h, Faccion f)
         {
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
             ActualizarSeguimiento(h);
             var s = SeguimientoDe(h);
             var error = Dialogo.Texto("", "error oculto");
@@ -656,7 +664,7 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>El tablón entero (`htmlTablon`): las dos columnas, Diarias y Semanales, y, para quien elige, la elección de la semana que viene.</summary>
         void TablonDeMisiones(VisualElement v, Heroe h, string tipo, string duenoId, Tablon t, Action<string> error, Action repintar)
         {
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
             v.Add(ConAyuda(Dialogo.Texto("Misiones que vuelven cada día y cada semana.", "campo-ayuda"), tipo == "plaza"
                 ? "Las individuales las acepta cada residente y cuentan desde que la aceptas; las grupales cuentan lo de todos los residentes. Dan participación en la plaza y, algunas, experiencia de Facción, recursos, oro o tropa: en una individual, a tu almacén personal (la tropa nace en tu campamento); en una grupal, al almacén de la plaza. Pasa el ratón por cada premio para ver adónde va. Lo cumplido se reclama aunque haya pasado el día."
                 : "Las individuales las acepta cada ciudadano y cuentan desde que la aceptas; las grupales cuentan lo de toda la Facción. Lo cumplido se reclama aunque haya pasado el periodo; las grupales las reclama el Rey."));

@@ -89,7 +89,7 @@ namespace ConquestTactics.Mundo.UI
             faccionVentana = Dialogo.Caja("base-ventana faccion-ventana");
             faccionVentana.name = "faccion-ventana";
             // Las piezas comunes del prototipo (el letrero `.faction-kicker`) están en la hoja de la plaza.
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) faccionVentana.styleSheets.Add(hoja);
+            if (HojaDePlaza is StyleSheet hoja) faccionVentana.styleSheets.Add(hoja);
             pantallaMontada.Add(faccionVentana);
             modoFaccion = "inicio";
             firmaFaccion = null;

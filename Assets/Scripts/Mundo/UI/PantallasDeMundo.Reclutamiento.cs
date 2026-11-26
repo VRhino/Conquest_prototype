@@ -224,7 +224,7 @@ namespace ConquestTactics.Mundo.UI
             // Con Facción y alguien en el tablón, junto a reclutar, el tablón de mercenarios del campamento (paso 12, tanda 2; Víctor, 2b).
             if (h != null && h.HasFaccionId && camp != null && camp.Tablon.Count > 0)
             {
-                if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hojaPlaza && !v.styleSheets.Contains(hojaPlaza)) v.styleSheets.Add(hojaPlaza);
+                if (HojaDePlaza is StyleSheet hojaPlaza && !v.styleSheets.Contains(hojaPlaza)) v.styleSheets.Add(hojaPlaza);
                 var pestanas = Dialogo.Caja("recl-pestanas");
                 foreach (var (id, nombre) in new[] { ("tropa", "Tropa"), ("mercenarios", "Mercenarios") })
                 {

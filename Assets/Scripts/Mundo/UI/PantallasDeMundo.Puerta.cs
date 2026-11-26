@@ -122,7 +122,7 @@ namespace ConquestTactics.Mundo.UI
             if (extra == null)
             {
                 // Las piezas de la plaza (barras, notas, botones de anillo) vienen de su hoja.
-                if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) ficha.styleSheets.Add(hoja);
+                if (HojaDePlaza is StyleSheet hoja) ficha.styleSheets.Add(hoja);
                 extra = Dialogo.Caja("ficha-extra");
                 extra.name = "ficha-extra";
                 var acciones = ficha.Q("ficha-acciones");
@@ -154,7 +154,7 @@ namespace ConquestTactics.Mundo.UI
             placa = Dialogo.Caja("placa ventana-puerta");
             placa.name = "ventana-puerta";
             placa.EnableInClassList("ancha", ventanaDePuerta == "mercado" || ventanaDePuerta == "taberna" || ventanaDePuerta == "mercenarios");
-            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hojaPlaza) placa.styleSheets.Add(hojaPlaza);
+            if (HojaDePlaza is StyleSheet hojaPlaza) placa.styleSheets.Add(hojaPlaza);
             var filete = Dialogo.Caja("placa-filete ventana-puerta-filete");
             var cab = Dialogo.Caja("ventana-puerta-cab");
             var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : ventanaDePuerta == "mercado" ? "Mercado" : ventanaDePuerta == "taberna" ? "Taberna" : ventanaDePuerta == "mercenarios" ? "Mercenarios"
