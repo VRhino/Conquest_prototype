@@ -175,14 +175,30 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.AreEqual(0, abajo, $"{m.name}: {abajo} de {normales.Count} normales miran hacia abajo (la más baja, {normales.Min(n => n.y):0.00})");
             }
 
-            // El río cercano se ve con color de agua (azul por encima del rojo) en la imagen de la cámara.
-            var rio = artefacto.Rios.SelectMany(r => r.Puntos).Select(p => (x: p.X / 1000.0, y: p.Y / 1000.0))
-                .Where(p => !relieve.AguaEn(p.x, p.y)).OrderBy(p => CosasDelMapa.Distancia(p.x, p.y, cx, cy)).First();
+            // El río cercano se ve con color de agua (azul por encima del rojo) en la imagen de la cámara: el punto de su eje pintado (la curva de
+            // `RiosDelMapa.Tramos`, la que tallan el suelo y la lámina; los puntos del motor pueden quedar algo fuera de ella), fuera del nacimiento
+            // (que se afina hasta casi nada), más cercano a la columna de los que caen dentro de la imagen; también donde el relieve ya lo marca
+            // como agua, con los puntos del motor (los tramos de la curva se cortan donde hay agua; en el mundo de pruebas, sin anchos, el río
+            // ancho junto al campamento es agua del relieve entero). (Antes se tomaba el punto del motor más
+            // cercano aunque cayera fuera: a 39 u, por debajo del borde de abajo, y GetPixel daba la vuelta y leía otro sitio.)
+            var nace = artefacto.Rios.Where(r => r.Puntos.Count > 0).Select(r => (x: r.Puntos[0].X / 1000.0, y: r.Puntos[0].Y / 1000.0)).ToList();
+            var candidatos = artefacto.Rios.SelectMany(r => RiosDelMapa.Tramos(r, relieve)).SelectMany(t => t.Puntos).Select(p => (x: (double)p.x, y: (double)p.y))
+                .Concat(artefacto.Rios.SelectMany(r => r.Puntos).Select(p => (x: p.X / 1000.0, y: p.Y / 1000.0)).Where(p => relieve.AguaEn(p.x, p.y)))
+                .Where(p => nace.All(n => CosasDelMapa.Distancia(p.x, p.y, n.x, n.y) > CampoDeRios.Nacimiento + 1))
+                .OrderBy(p => CosasDelMapa.Distancia(p.x, p.y, cx, cy)).ToList();
             yield return null;
             var imagen = Leer(rtMapa);
-            var enPantalla = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(rio.x, rio.y, relieve.AlturaEn(rio.x, rio.y)));
-            Assert.Greater(enPantalla.z, 0, "el río queda delante de la cámara");
+            (double x, double y) rio = default;
+            Vector3 enPantalla = default;
+            foreach (var p in candidatos)
+            {
+                // a la altura de su agua (el lecho menos un metro), donde la pinta la lámina
+                var q = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(p.x, p.y, relieve.AlturaEn(p.x, p.y) - 1));
+                if (q.z > 0 && q.x >= 8 && q.y >= 8 && q.x < mapa.Vista.pixelWidth - 8 && q.y < mapa.Vista.pixelHeight - 8) { rio = p; enPantalla = q; break; }
+            }
+            Assert.Greater(enPantalla.z, 0, "un río cercano queda dentro de la imagen de la cámara");
             var pixel = imagen.GetPixel((int)(enPantalla.x * 1600 / mapa.Vista.pixelWidth), (int)(enPantalla.y * 900 / mapa.Vista.pixelHeight));
+            Debug.Log($"[Mapa] el río de la prueba: ({rio.x:0.0}, {rio.y:0.0}), en la imagen ({enPantalla.x:0}, {enPantalla.y:0}) de {mapa.Vista.pixelWidth}x{mapa.Vista.pixelHeight}: {pixel}");
             Assert.Greater(pixel.b, pixel.r + 0.03f, $"el píxel del río en ({rio.x:0.0}, {rio.y:0.0}) es de agua: {pixel}");
 
             // El agua de junto al campamento 4 es un lago. El mar (junto al campamento 7) y un vado (junto al campamento 2): la columna va allí y se

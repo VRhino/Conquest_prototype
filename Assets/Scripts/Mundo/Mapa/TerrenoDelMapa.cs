@@ -634,7 +634,9 @@ namespace ConquestTactics.Mundo.Mapa
             for (int k = 0; k < arriba.Length; k++) arriba[k] = Vector3.up;
             malla.SetNormals(arriba);
             malla.SetUVs(0, uvs);
-            if (rio != null) { malla.SetUVs(1, uv1); malla.SetUVs(2, uv2); malla.SetUVs(3, uv3); }
+            // (siempre, también sin río: sin esos canales, el sombreado del agua leía valores sin definir y la lámina de las teselas sin río no se
+            // veía; en el mundo de pruebas, lagos enteros de arena)
+            malla.SetUVs(1, uv1); malla.SetUVs(2, uv2); malla.SetUVs(3, uv3);
             malla.SetTriangles(triangulos, 0);
             malla.RecalculateBounds();
             var go = new GameObject("agua");
