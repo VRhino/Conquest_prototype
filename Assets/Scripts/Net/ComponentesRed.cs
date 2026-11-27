@@ -151,6 +151,15 @@ namespace ConquestTactics.Net
         }
     }
 
+    /// <summary>La vida de cada soldado de la escuadra activa del jugador (0 muerto, 255 entera), de más a menos: las barras de la ficha de la
+    /// escuadra del HUD (`HudDeBatalla`). Solo al dueño.</summary>
+    [GhostComponent(OwnerSendType = SendToOwnerType.SendToOwner)]
+    [InternalBufferCapacity(0)]
+    public struct VidaDeSoldadoRed : IBufferElementData
+    {
+        [GhostField] public byte Vida;
+    }
+
     /// <summary>Una casilla de la barra de habilidades del jugador (de Q a la tercera de escuadra), con su recarga.</summary>
     [GhostComponent(OwnerSendType = SendToOwnerType.SendToOwner)]
     [InternalBufferCapacity(UIHeroBattleDataComponent.SkillSlotCount)]

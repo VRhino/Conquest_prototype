@@ -70,6 +70,12 @@ namespace ConquestTactics.Net
                 _escenaPedida = true;
                 BattleBootstrapRequests.NoLocalHero = true;
                 ReservaDeProyectiles.Asegurar();
+                // Un cliente lanzado con -ticket (las pruebas sin motor) genera el campo del lugar del mismo ticket que el servidor.
+                if (!string.IsNullOrEmpty(OpcionesRed.Ticket))
+                {
+                    var ticket = BatallaDeTicket.Leer(OpcionesRed.Ticket);
+                    ConquestTactics.Mundo.Campo.CampoDeLaBatalla.Empezar(ticket.BattleId, ticket, null, Debug.Log);
+                }
                 SceneManager.LoadScene(SceneTransitionService.SceneNames.Battle);
                 return;
             }

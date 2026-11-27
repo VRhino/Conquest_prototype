@@ -38,6 +38,7 @@ public class BattleRadialMenu : MonoBehaviour
     [Min(0f)] [SerializeField] float outerRadius = 300f;
 
     SquadData _squad;
+    bool _formationsBound;
     UIHeroBattleDataComponent _data;
     int _hovered = RadialMenuLayout.NoSector;
     /// <summary>The sector a click already asked for: releasing ALT over it does not ask again.</summary>
@@ -109,7 +110,9 @@ public class BattleRadialMenu : MonoBehaviour
 
     void BindFormations(SquadData squad)
     {
-        bool changed = squad != _squad;
+        // (la primera vez también: sin tropa, los sectores del prefab se quedaban con su «F1» de muestra)
+        bool changed = squad != _squad || !_formationsBound;
+        _formationsBound = true;
         _squad = squad;
         for (int i = 0; i < formations.Length; i++)
         {

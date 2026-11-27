@@ -381,6 +381,17 @@ namespace ConquestTactics.Net
                         red.Soldados = estado.aliveUnits;
                         red.SoldadosTotales = estado.totalUnits;
                     }
+                    else if (SystemAPI.HasBuffer<SquadUnitElement>(escuadra))
+                    {
+                        // SquadStatusUpdateSystem solo lleva la del héroe local, y en el servidor no hay: los vivos, contados aquí (el total lo pone el
+                        // HUD con el de la tropa, porque los muertos salen del búfer)
+                        var unidades = SystemAPI.GetBuffer<SquadUnitElement>(escuadra);
+                        int vivos = 0;
+                        for (int u = 0; u < unidades.Length; u++)
+                            if (SystemAPI.Exists(unidades[u].Value) && !SystemAPI.HasComponent<IsDeadComponent>(unidades[u].Value)) vivos++;
+                        red.Soldados = vivos;
+                        red.SoldadosTotales = 0;
+                    }
                     if (SystemAPI.HasComponent<FormationComponent>(escuadra))
                         red.Formacion = (byte)SystemAPI.GetComponent<FormationComponent>(escuadra).currentFormation;
                 }
@@ -389,6 +400,30 @@ namespace ConquestTactics.Net
             Reserva(heroe, mando, ref red, ahora);
             EnZona(SystemAPI.GetComponent<LocalTransform>(heroe).Position, ref red);
             SystemAPI.SetComponent(mando, red);
+            // la vida de cada soldado de su escuadra, para las barras del HUD (de más a menos, como las ordena la ficha)
+            var vidas = SystemAPI.GetBuffer<VidaDeSoldadoRed>(mando);
+            vidas.Clear();
+            if (SystemAPI.HasComponent<HeroSquadReference>(heroe))
+            {
+                var escuadra = SystemAPI.GetComponent<HeroSquadReference>(heroe).squad;
+                if (SystemAPI.Exists(escuadra) && SystemAPI.HasBuffer<SquadUnitElement>(escuadra))
+                {
+                    var unidades = SystemAPI.GetBuffer<SquadUnitElement>(escuadra);
+                    for (int u = 0; u < unidades.Length; u++)
+                    {
+                        var unidad = unidades[u].Value;
+                        float v = 0f;
+                        if (SystemAPI.Exists(unidad) && !SystemAPI.HasComponent<IsDeadComponent>(unidad) && SystemAPI.HasComponent<HealthComponent>(unidad))
+                        {
+                            var hp = SystemAPI.GetComponent<HealthComponent>(unidad);
+                            v = hp.maxHealth > 0f ? math.saturate(hp.currentHealth / hp.maxHealth) : 0f;
+                        }
+                        vidas.Add(new VidaDeSoldadoRed { Vida = (byte)math.round(v * 255f) });
+                    }
+                    for (int a = 1; a < vidas.Length; a++)
+                        for (int b = a; b > 0 && vidas[b].Vida > vidas[b - 1].Vida; b--) { var t = vidas[b]; vidas[b] = vidas[b - 1]; vidas[b - 1] = t; }
+                }
+            }
             var casillas = SystemAPI.GetBuffer<HabilidadRed>(mando);
             casillas.ResizeUninitialized(ui.skills.Length);
             for (int i = 0; i < ui.skills.Length; i++)

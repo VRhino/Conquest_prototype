@@ -74,7 +74,8 @@ namespace ConquestTactics.Net
                 var e = new EntradaJugador { Mover = mover, EscuadraPedida = _ultimaPedida };
                 if (pedida >= 0)
                     e.CambiarEscuadra.Set();
-                var teclado = Keyboard.current;
+                // (con la cámara libre, el teclado es de la cámara)
+                var teclado = CamaraLibre.Activa ? null : Keyboard.current;
                 if (OpcionesRed.Bot)
                 {
                     // Además de empujar y atacar, cada 8 s da una orden a su escuadra (van rotando) y cada 5 s lanza la Q.
@@ -261,7 +262,7 @@ namespace ConquestTactics.Net
         static float2 MovimientoDeTeclado()
         {
             var teclado = Keyboard.current;
-            if (teclado == null)
+            if (teclado == null || CamaraLibre.Activa)
                 return float2.zero;
             float2 ejes = new float2(
                 (teclado.dKey.isPressed ? 1 : 0) - (teclado.aKey.isPressed ? 1 : 0),
@@ -370,6 +371,10 @@ namespace ConquestTactics.Net
             if (EspejoClienteSystem.CamaraDelJuego)
             {
                 // La cámara del juego sigue al héroe propio (EspejoClienteSystem): aquí no se toca.
+            }
+            else if (CamaraLibre.Activa)
+            {
+                // La cámara libre la lleva VistaDeBatalla.
             }
             else if (camara != null && propio.HasValue)
             {

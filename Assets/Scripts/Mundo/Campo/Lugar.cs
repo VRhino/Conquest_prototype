@@ -98,8 +98,8 @@ namespace ConquestTactics.Mundo.Campo
         public Rejilla Alturas;
         /// <summary>El agua de cada muestra de las alturas: 0 tierra, 1 lago, 2 mar; y en Q16 (0 o 1), para interpolarla.</summary>
         public Rejilla Agua, AguaQ16;
-        /// <summary>Por celda de 4 u, con la muestra en su centro: la clase de terreno (1 agua … 6 cima), el bosque y la fertilidad (Q16).</summary>
-        public Rejilla Terreno, Bosque, Fertilidad;
+        /// <summary>Por celda de 4 u, con la muestra en su centro: la clase de terreno (1 agua … 6 cima), el bosque, la fertilidad y la humedad (Q16; sin humedad en el ticket, media).</summary>
+        public Rejilla Terreno, Bosque, Fertilidad, Humedad;
         public List<RioDelLugar> Rios = new List<RioDelLugar>();
 
         /// <summary>La x absoluta del ruido (mm): la del centro del recorte por la escala del campo.</summary>
@@ -128,7 +128,7 @@ namespace ConquestTactics.Mundo.Campo
         /// <summary>El recorte a partir de lo que trae el ticket; posiciones en milésimas de u, alturas en el u16 del relieve (0..65535 = 0..1000 m).</summary>
         public static Lugar Crear(Punto centro, long ladoMilesimas, Punto punto, Punto? procedenciaAtacante, Punto? procedenciaDefensor,
             Punto origenRelieve, long pasoRelieve, int columnas, int filas, ushort[] alturas, byte[] agua,
-            Punto origenCeldas, long pasoCeldas, int columnasCeldas, int filasCeldas, byte[] bosque, byte[] fertilidad, IEnumerable<(Punto[] puntos, Punto[] vados, bool navegable, long[] anchos)> rios)
+            Punto origenCeldas, long pasoCeldas, int columnasCeldas, int filasCeldas, byte[] bosque, byte[] fertilidad, byte[] humedad, IEnumerable<(Punto[] puntos, Punto[] vados, bool navegable, long[] anchos)> rios)
         {
             if (alturas.Length != columnas * filas || agua.Length != alturas.Length) throw new ArgumentException("el relieve del recorte no casa con sus medidas");
             if (bosque.Length != columnasCeldas * filasCeldas || fertilidad.Length != bosque.Length) throw new ArgumentException("las celdas del recorte no casan con sus medidas");
@@ -151,6 +151,7 @@ namespace ConquestTactics.Mundo.Campo
             l.Terreno = new Rejilla(oc.X, oc.Y, pasoCeldas * EscalaCampo, columnasCeldas, filasCeldas);
             l.Bosque = new Rejilla(oc.X, oc.Y, pasoCeldas * EscalaCampo, columnasCeldas, filasCeldas);
             l.Fertilidad = new Rejilla(oc.X, oc.Y, pasoCeldas * EscalaCampo, columnasCeldas, filasCeldas);
+            l.Humedad = new Rejilla(oc.X, oc.Y, pasoCeldas * EscalaCampo, columnasCeldas, filasCeldas);
             for (int j = 0, k = 0; j < filasCeldas; j++)
                 for (int i = 0; i < columnasCeldas; i++, k++)
                 {
@@ -160,6 +161,7 @@ namespace ConquestTactics.Mundo.Campo
                     l.Terreno.Datos[k] = ClaseDeTerreno(alturas[m], agua[m] != 0);
                     l.Bosque.Datos[k] = (int)DivRedondo(bosque[k] * (long)Uno, 255);
                     l.Fertilidad.Datos[k] = (int)DivRedondo(fertilidad[k] * (long)Uno, 255);
+                    l.Humedad.Datos[k] = humedad != null && humedad.Length == bosque.Length ? (int)DivRedondo(humedad[k] * (long)Uno, 255) : Uno / 2;
                 }
             foreach (var (puntos, vados, navegable, anchos) in rios)
             {
@@ -199,7 +201,7 @@ namespace ConquestTactics.Mundo.Campo
             var b = r.Bosque;
             return Crear(P(mapa.Centro), r.Lado, P(puntoDeLaBatalla), Procedencia(r.ProcedenciaAtacante), Procedencia(r.ProcedenciaDefensor),
                 P(rel.Origen), rel.Paso, (int)rel.Columnas, (int)rel.Filas, alturas, agua,
-                P(b.Origen), b.Paso, (int)b.Columnas, (int)b.Filas, b.Valores.ToByteArray(), r.Fertilidad.Valores.ToByteArray(), rios);
+                P(b.Origen), b.Paso, (int)b.Columnas, (int)b.Filas, b.Valores.ToByteArray(), r.Fertilidad.Valores.ToByteArray(), r.Humedad?.Valores.ToByteArray(), rios);
         }
 
         /// <summary>El ticket en el JSON de la mesa del campo (`TicketDelLugar`, `pruebas/campo3d/generador.ts` de BronzeAgeClient; el motor lo saca
@@ -224,7 +226,7 @@ namespace ConquestTactics.Mundo.Campo
             }
             return Crear(P(t["centro"]), Mil(r["lado_recorte"]), P(t["punto"]), Procedencia(r["procedencia_atacante"]), Procedencia(r["procedencia_defensor"]),
                 P(alt["origen"]), Mil(alt["paso"]), (int)alt["columnas"], (int)alt["filas"], alt["valores"].ToObject<ushort[]>(), Array.ConvertAll(agua.ToCharArray(), c => (byte)(c - '0')),
-                P(bosque["origen"]), Mil(bosque["paso"]), (int)bosque["columnas"], (int)bosque["filas"], Bytes(bosque), Bytes(r["fertilidad"]), rios);
+                P(bosque["origen"]), Mil(bosque["paso"]), (int)bosque["columnas"], (int)bosque["filas"], Bytes(bosque), Bytes(r["fertilidad"]), r["humedad"] != null ? Bytes(r["humedad"]) : null, rios);
         }
     }
 

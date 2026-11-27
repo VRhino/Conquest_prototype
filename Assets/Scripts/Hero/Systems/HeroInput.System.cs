@@ -36,7 +36,8 @@ public partial class HeroInputSystem : SystemBase
         bool mount = false;
         var uiSquadSkill = BattleCommandInput.ConsumeSquadSkill();
 
-        if (keyboard != null && DialogueUIState.IsDialogueOpen == false)
+        // (con la cámara libre, el teclado y el ratón son de la cámara)
+        if (keyboard != null && DialogueUIState.IsDialogueOpen == false && !CamaraLibre.Activa)
         {
             if (keyboard.aKey.isPressed) move.x -= 1f;
             if (keyboard.dKey.isPressed) move.x += 1f;
@@ -56,7 +57,7 @@ public partial class HeroInputSystem : SystemBase
             mount = keyboard.gKey.wasPressedThisFrame;
         }
 
-        if (mouse != null && DialogueUIState.IsDialogueOpen == false)
+        if (mouse != null && DialogueUIState.IsDialogueOpen == false && !CamaraLibre.Activa)
         {
             uiOwnsClick = mouse.leftButton.isPressed && (uiOwnsClick || BattleCommandInput.PointerMode);
             attack = mouse.leftButton.isPressed && !uiOwnsClick;

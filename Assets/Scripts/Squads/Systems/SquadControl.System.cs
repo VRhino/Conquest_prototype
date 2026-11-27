@@ -41,7 +41,7 @@ public partial class SquadControlSystem : SystemBase
         var mouse = Mouse.current;
         int uiFormation = BattleCommandInput.ConsumeFormation();
 
-        if (keyboard == null || mouse == null || DialogueUIState.IsDialogueOpen)
+        if (keyboard == null || mouse == null || DialogueUIState.IsDialogueOpen || CamaraLibre.Activa)
             return;
 
         bool orderIssued = false;

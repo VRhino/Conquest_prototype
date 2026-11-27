@@ -1,0 +1,90 @@
+/* El HUD de la batalla (pedido del autor, 2026-11-27): «Bronce y arcilla» como el resto del juego. Va cargada después de MundoUI/Mundo.uss
+   (sus tokens, sus letras y `.tropa-tarjeta`) y usa la placa «bronce batido» de los carteles del mapa (Placas/placa1.png, en nueve cortes). */
+
+.hud { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+/* La placa de bronce batido: nueve cortes de 12 px a tres cuartos (como `.nombre-mapa--placa1`); la de oro marca lo activo. */
+.hud-placa {
+    background-image: url("../MundoUI/Placas/placa1.png");
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.75px;
+}
+.hud-placa-oro { background-image: url("../MundoUI/Placas/placa1_oro.png"); }
+.hud-velo { background-color: rgba(14, 10, 6, 0.82); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
+.hud-cinzel { -unity-font: url("../MundoUI/Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }
+.hud-inter { -unity-font: url("../MundoUI/Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }
+.hud-kicker { font-size: 9.5px; letter-spacing: 3px; color: var(--oro); margin: 7px 0 3px 1px; padding: 0; }
+
+/* El tiempo, arriba en el centro. */
+.hud-tiempo { position: absolute; top: 8px; left: 50%; translate: -50% 0; padding: 5px 24px 6px 24px; align-items: center; }
+.hud-tiempo-texto { font-size: 22px; color: var(--oro-claro); letter-spacing: 3px; margin: 0; padding: 0; -unity-text-align: middle-center; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
+.hud-tiempo-ultimos .hud-tiempo-texto { color: var(--rojo-claro); }
+
+/* El héroe, abajo en el centro: vida y aguante y, debajo, sus habilidades. */
+.hud-heroe { position: absolute; bottom: 10px; left: 50%; translate: -50% 0; align-items: center; padding: 11px 14px 12px 14px; }
+.hud-barra { width: 430px; height: 17px; margin-bottom: 4px; background-color: rgb(12, 9, 6); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; overflow: hidden; }
+.hud-barra-relleno { position: absolute; left: 0; top: 0; bottom: 0; }
+.hud-barra-brillo { position: absolute; left: 0; right: 0; top: 0; height: 35%; background-color: rgba(255, 240, 210, 0.16); }
+.hud-barra-marca { position: absolute; top: 0; bottom: 0; width: 1px; background-color: rgba(0, 0, 0, 0.45); }
+.hud-vida .hud-barra-relleno { background-color: rgb(166, 54, 36); }
+.hud-aguante { height: 13px; }
+.hud-aguante .hud-barra-relleno { background-color: rgb(196, 158, 82); }
+.hud-barra-texto {
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: 0; padding: 0;
+    font-size: 12px; color: var(--pergamino); -unity-text-align: middle-center; text-shadow: 0 1px 1px rgba(0, 0, 0, 1);
+}
+.hud-aguante .hud-barra-texto { font-size: 10.5px; }
+.hud-fila { flex-direction: row; align-items: flex-end; }
+.hud-heroe > .hud-fila { margin-top: 6px; }
+.hud-separa { width: 1px; height: 40px; margin: 0 8px 4px 8px; background-color: var(--bronce-osc); }
+
+/* Un hueco de habilidad: la placa de bronce, el icono, la espera encima y la tecla en su pestaña. */
+.hud-hueco { width: 54px; height: 54px; margin: 0 2px; padding: 7px; }
+.hud-hueco-icono { flex-grow: 1; -unity-background-scale-mode: scale-to-fit; border-radius: 2px; }
+.hud-hueco-espera { position: absolute; left: 7px; right: 7px; bottom: 7px; background-color: rgba(8, 6, 4, 0.74); }
+.hud-hueco-segundos { position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: 0; padding: 0; font-size: 15px; color: var(--pergamino); -unity-text-align: middle-center; text-shadow: 0 1px 2px rgba(0, 0, 0, 1); }
+.hud-hueco-tecla {
+    position: absolute; right: -2px; bottom: -3px; min-width: 15px; height: 15px; padding: 0 3px; margin: 0;
+    background-color: rgb(20, 15, 10); border-width: 1px; border-color: var(--bronce); border-radius: 2px;
+    font-size: 9.5px; color: var(--oro-claro); -unity-text-align: middle-center;
+}
+.hud-hueco-combo {
+    position: absolute; left: 50%; top: -9px; translate: -50% 0; padding: 0 4px; margin: 0; height: 14px;
+    background-color: rgb(20, 15, 10); border-width: 1px; border-color: var(--oro); border-radius: 2px;
+    font-size: 9.5px; color: var(--oro-claro); -unity-text-align: middle-center;
+}
+.hud-hueco-vacio .hud-hueco-icono { opacity: 0; }
+.hud-hueco-vacio { opacity: 0.5; }
+.hud-hueco-sin-coste .hud-hueco-icono { -unity-background-image-tint-color: rgb(150, 95, 85); }
+.hud-perk { width: 44px; height: 44px; padding: 6px; }
+.hud-perk .hud-hueco-espera { left: 6px; right: 6px; bottom: 6px; }
+
+/* La escuadra, abajo a la izquierda, solo con tropa: su tarjeta (la del juego, `PiezasDeTropa.Tarjeta`) y, al lado, la ficha. */
+.hud-escuadra { position: absolute; bottom: 10px; left: 12px; flex-direction: row; align-items: flex-end; }
+.hud-escuadra .tropa-tarjeta { margin: 0 8px 0 0; }
+.hud-ficha { padding: 10px 14px 12px 13px; width: 316px; }
+.hud-escuadra-nombre { font-size: 16px; color: var(--oro-claro); letter-spacing: 1px; margin: 0; padding: 0; }
+.hud-escuadra-cab { flex-direction: row; align-items: center; justify-content: space-between; }
+.hud-escuadra-efectivos { font-size: 12px; color: var(--pergamino); margin: 2px 0 0 0; padding: 0; }
+.hud-escuadra-barra { height: 6px; margin-top: 4px; background-color: rgb(12, 9, 6); border-width: 1px; border-color: var(--bronce-osc); border-radius: 1px; overflow: hidden; }
+.hud-escuadra-barra .hud-barra-relleno { background-color: rgb(120, 170, 110); }
+.hud-soldados { flex-direction: row; align-items: flex-end; height: 34px; margin-top: 6px; }
+.hud-soldado { flex-grow: 1; flex-basis: 0; max-width: 12px; height: 100%; margin-right: 2px; background-color: rgb(12, 9, 6); border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 1px; }
+.hud-soldado-vida { position: absolute; left: 0; right: 0; bottom: 0; background-color: rgb(120, 170, 110); }
+.hud-soldado-mal .hud-soldado-vida { background-color: rgb(196, 72, 48); }
+.hud-soldado-muerto { opacity: 0.3; }
+.hud-formacion { width: 44px; height: 44px; margin: 0 4px 0 0; padding: 7px; }
+.hud-formacion .hud-hueco-icono { -unity-background-image-tint-color: rgb(205, 190, 160); }
+.hud-formacion-activa .hud-hueco-icono { -unity-background-image-tint-color: rgb(255, 245, 220); }
+.hud-escuadra .hud-hueco { width: 44px; height: 44px; padding: 6px; margin: 0 4px 0 0; }
+.hud-escuadra .hud-hueco-espera { left: 6px; right: 6px; bottom: 6px; }
+.hud-escuadra .hud-hueco-segundos { font-size: 12px; }
+
+/* El minimapa y la cámara libre, abajo a la derecha (VistaDeBatalla). */
+.hud-minimapa-caja { position: absolute; right: 12px; bottom: 10px; align-items: stretch; }
+.hud-camara { height: 30px; margin: 0 0 4px 0; padding: 0 10px; }
+.hud-camara-texto { font-size: 12px; color: var(--oro-claro); -unity-text-align: middle-center; margin: 0; padding: 0; -unity-font: url("../MundoUI/Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.hud-minimapa { width: 252px; height: 252px; padding: 10px; }
+.hud-minimapa-mapa { flex-grow: 1; border-width: 1px; border-color: rgb(40, 30, 18); -unity-background-scale-mode: stretch-to-fill; overflow: hidden; }
+.hud-minimapa-puntos { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.hud-minimapa-punto { position: absolute; translate: -50% -50%; border-radius: 50%; }
+.hud-minimapa-tu { border-width: 1px; border-color: rgb(30, 22, 12); }
